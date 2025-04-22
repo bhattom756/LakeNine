@@ -8,7 +8,7 @@ import PromptInput from "@/components/PromptInput";
 import Navbar from "@/components/ui/Navbar";
 
 type FileStructure = string[];
-type TestResultsType = string[]; // Avoid name conflict with component
+type TestResultsType = string[]; 
 
 export default function StudioPage() {
   const [prompt, setPrompt] = useState<string>("");
