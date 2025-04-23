@@ -1,22 +1,37 @@
-"use client";  // This marks the component as a client-side component.
+'use client';
+
+import { useState } from 'react';
 
 interface TestResultsProps {
   testResults: string[];
 }
 
-const TestResults: React.FC<TestResultsProps> = ({ testResults }) => {
+export default function TestResults({ testResults }: TestResultsProps) {
+  const [running, setRunning] = useState(false);
+
+  const handleStartTesting = () => {
+    setRunning(true);
+    // Implement your unit testing logic here
+    // For example, trigger an API call to run tests
+    // After tests complete, update testResults accordingly
+  };
+
   return (
-    <div className="overflow-auto h-full p-4 bg-gray-100">
-      <h2 className="text-lg font-semibold">Test Results</h2>
-      <ul className="mt-2">
+    <div className="text-white">
+      <button
+        onClick={handleStartTesting}
+        className="mb-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded"
+        disabled={running}
+      >
+        {running ? 'Running Tests...' : 'Start Unit Testing'}
+      </button>
+      <ul>
         {testResults.map((result, index) => (
-          <li key={index} className={result.includes("fail") ? "text-red-500" : "text-green-500"}>
+          <li key={index} className="py-1">
             {result}
           </li>
         ))}
       </ul>
     </div>
   );
-};
-
-export default TestResults;
+}

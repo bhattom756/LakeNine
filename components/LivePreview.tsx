@@ -1,21 +1,31 @@
-"use client";  // This marks the component as a client-side component.
+'use client';
+
+import { useEffect, useRef } from 'react';
 
 interface LivePreviewProps {
   generatedCode: string;
 }
 
-const LivePreview: React.FC<LivePreviewProps> = ({ generatedCode }) => {
+export default function LivePreview({ generatedCode }: LivePreviewProps) {
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  useEffect(() => {
+    if (iframeRef.current && generatedCode) {
+      const document = iframeRef.current.contentDocument;
+      if (document) {
+        document.open();
+        document.write(generatedCode);
+        document.close();
+      }
+    }
+  }, [generatedCode]);
+
   return (
-    <div className="h-full bg-white p-4">
-      <h2 className="text-lg font-semibold">Live Preview</h2>
-      <iframe 
-        className="w-full h-full mt-4 border"
-        srcDoc={generatedCode}
-        title="Live Preview"
-      />
-    </div>
+    <iframe
+      ref={iframeRef}
+      title="Live Preview"
+      className="w-full h-full border-none bg-white"
+      sandbox="allow-scripts allow-same-origin"
+    />
   );
-};
-
-export default LivePreview;
-
+}

@@ -1,42 +1,58 @@
-"use client";  // This marks the component as a client-side component.
+"use client";
 
-interface PromptInputProps {
+import { useState } from "react";
+
+interface Props {
   prompt: string;
-  setPrompt: React.Dispatch<React.SetStateAction<string>>;
-  setGeneratedCode: React.Dispatch<React.SetStateAction<string>>;
-  setFileStructure: React.Dispatch<React.SetStateAction<string[]>>;
-  setTestResults: React.Dispatch<React.SetStateAction<string[]>>;
+  setPrompt: (v: string) => void;
+  setGeneratedCode: (v: string) => void;
+  setFileStructure: (v: string[]) => void;
+  setTestResults: (v: string[]) => void;
 }
 
-const PromptInput: React.FC<PromptInputProps> = ({ prompt, setPrompt, setGeneratedCode, setFileStructure, setTestResults }) => {
+export default function PromptInput({
+  prompt, setPrompt,
+  setGeneratedCode, setFileStructure, setTestResults,
+}: Props) {
+  const [loading, setLoading] = useState(false);
+
   const handleGenerate = async () => {
-    const response = await fetch("/api/generateCode", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt }),
-    });
-    const data = await response.json();
-    setGeneratedCode(data.generatedCode);
-    setFileStructure(data.fileStructure);
-    setTestResults(data.testResults);
+    if (!prompt.trim()) return;
+    setLoading(true);
+    try {
+      const res = await fetch("/api/genCode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt }),
+      });
+      if (!res.ok) throw new Error(`Error ${res.status}`);
+      const data = await res.json();
+      setGeneratedCode(data.code);
+      setFileStructure(data.fileStructure);
+      setTestResults(data.testResults);
+    } catch (e: any) {
+      console.error("Error generating code:", e.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="p-4">
-      <textarea 
-        className="w-full p-2 border rounded-md"
-        placeholder="Describe your website..."
+    <div>
+      <textarea
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
+        placeholder="Enter your prompt..."
+        className="w-full p-2 bg-gray-800 text-white rounded"
+        rows={4}
       />
       <button
-        className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
         onClick={handleGenerate}
+        disabled={loading}
+        className="mt-2 w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded"
       >
-        Generate Website
+        {loading ? "Generating..." : "Generate"}
       </button>
     </div>
   );
-};
-
-export default PromptInput;
+}

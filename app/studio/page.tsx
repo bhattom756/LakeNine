@@ -1,26 +1,27 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import FileTree from "@/components/FileTree";
-import LivePreview from "@/components/LivePreview";
-import TestResults from "@/components/TestResults";
-import PromptInput from "@/components/PromptInput";
-import Navbar from "@/components/ui/Navbar";
+import { useState } from 'react';
+import FileTree from '@/components/FileTree';
+import LivePreview from '@/components/LivePreview';
+import TestResults from '@/components/TestResults';
+import PromptInput from '@/components/PromptInput';
+import Navbar from '@/components/ui/Navbar';
 
 type FileStructure = string[];
-type TestResultsType = string[]; 
+type TestResultsType = string[];
 
 export default function StudioPage() {
-  const [prompt, setPrompt] = useState<string>("");
+  const [prompt, setPrompt] = useState<string>('');
   const [fileStructure, setFileStructure] = useState<FileStructure>([]);
-  const [generatedCode, setGeneratedCode] = useState<string>("");
+  const [generatedCode, setGeneratedCode] = useState<string>('');
   const [testResults, setTestResults] = useState<TestResultsType>([]);
 
   return (
-    <div className="bg-[#0f0f0f] text-white min-h-screen">
+    <div className="bg-black text-white min-h-screen overflow-hidden">
       <Navbar />
-      <div className="flex h-[calc(100vh-60px)] pt-12">
-        <div className="w-1/4 bg-[#1e1e1e] border-r border-gray-700 flex flex-col">
+      <div className="flex h-[calc(100vh-60px)] pt-12 overflow-hidden">
+        {/* Left - File Structure & Prompt Input */}
+        <div className="w-1/4 bg-gray-900 border-r border-gray-700 flex flex-col overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-700">
             <h2 className="text-lg font-semibold">File Structure</h2>
           </div>
@@ -39,15 +40,19 @@ export default function StudioPage() {
         </div>
 
         {/* Center - Live Preview */}
-        <div className="w-1/2 p-6 overflow-auto">
+        <div className="w-1/2 p-6 overflow-hidden">
           <h2 className="text-lg font-semibold mb-4">Live Preview</h2>
-          <LivePreview generatedCode={generatedCode} />
+          <div className="h-full bg-white rounded overflow-hidden">
+            <LivePreview generatedCode={generatedCode} />
+          </div>
         </div>
 
         {/* Right - Test Results */}
-        <div className="w-1/4 bg-[#1e1e1e] p-6 overflow-auto border-l border-gray-700">
-          <h2 className="text-lg font-semibold mb-4">Test Results</h2>
-          <TestResults testResults={testResults} />
+        <div className="w-1/4 bg-gray-900 p-6 overflow-hidden border-l border-gray-700">
+        <h2 className="text-lg font-semibold mb-4">Test Results</h2>
+          <div className="h-full overflow-auto">
+            <TestResults testResults={testResults} />
+          </div>
         </div>
       </div>
     </div>

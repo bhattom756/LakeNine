@@ -1,20 +1,17 @@
-"use client";  // This marks the component as a client-side component.
+'use client';
 
 interface FileTreeProps {
   fileStructure: string[];
 }
 
-const FileTree: React.FC<FileTreeProps> = ({ fileStructure }) => {
+export default function FileTree({ fileStructure }: FileTreeProps) {
   return (
-    <div className="overflow-auto h-full p-4 bg-gray-100">
-      <h2 className="text-lg font-semibold">File Structure</h2>
-      <ul className="mt-2">
-        {fileStructure.map((file, index) => (
-          <li key={index}>{file}</li>
-        ))}
-      </ul>
-    </div>
+    <ul className="text-white">
+      {fileStructure.map((filePath, index) => (
+        <li key={index} className="py-1">
+          {filePath}
+        </li>
+      ))}
+    </ul>
   );
-};
-
-export default FileTree;
+}
