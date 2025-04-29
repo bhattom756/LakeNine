@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import FrameworkModal from "./FrameworkModal";
 
 interface Props {
   prompt: string;
@@ -15,15 +16,40 @@ export default function PromptInput({
   setGeneratedCode, setFileStructure, setTestResults,
 }: Props) {
   const [loading, setLoading] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [suggestedFrameworks, setSuggestedFrameworks] = useState<string[]>([]);
+  const [confirmedFrameworks, setConfirmedFrameworks] = useState<string[]>([]);
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
     setLoading(true);
     try {
-      const res = await fetch("/api/genCode", {
+      // Step 1: Detect frameworks (mocked for now)
+      const res = await fetch("/api/detect-frameworks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt }),
+      });
+      if (!res.ok) throw new Error(`Error ${res.status}`);
+      const data = await res.json();
+      setSuggestedFrameworks(data.frameworks || []);
+      setModalOpen(true);
+    } catch (e: any) {
+      console.error("Error detecting frameworks:", e.message);
+      setLoading(false);
+    }
+  };
+
+  const handleFrameworkConfirm = async (frameworks: string[]) => {
+    setModalOpen(false);
+    setConfirmedFrameworks(frameworks);
+    setLoading(true);
+    try {
+      // Step 2: Generate code with confirmed frameworks (mocked for now)
+      const res = await fetch("/api/genCode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt, frameworks }),
       });
       if (!res.ok) throw new Error(`Error ${res.status}`);
       const data = await res.json();
@@ -53,6 +79,12 @@ export default function PromptInput({
       >
         {loading ? "Generating..." : "Generate"}
       </button>
+      <FrameworkModal
+        isOpen={modalOpen}
+        suggestedFrameworks={suggestedFrameworks}
+        onConfirm={handleFrameworkConfirm}
+        onClose={() => setModalOpen(false)}
+      />
     </div>
   );
 }

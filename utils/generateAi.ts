@@ -1,9 +1,27 @@
-export const generateCodeAI = async (prompt: string) => {
-    // Replace with your AI model's code
-    const generatedCode = `Generated HTML, CSS, JavaScript code for: ${prompt}`;
-    const fileStructure = ["index.html", "style.css", "app.js"]; // Simulated files
-    const testResults = ["✅ Navbar.test.tsx passed", "❌ Form.test.tsx failed"];
-  
-    return { generatedCode, fileStructure, testResults };
-  };
+import { GeneratedApp, TestResult } from "@/types";
+
+export const generateCodeAI = async (prompt: string): Promise<{
+  app: GeneratedApp;
+  testResults: TestResult[];
+}> => {
+  try {
+    const response = await fetch("/api/generate", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ prompt }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to generate code");
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error generating code:", error);
+    throw error;
+  }
+};
   
