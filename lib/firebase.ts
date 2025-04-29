@@ -10,7 +10,9 @@ import {
   signInWithPopup,
   onAuthStateChanged,
   signOut,
-  User
+  User,
+  setPersistence,
+  browserSessionPersistence
 } from "firebase/auth";
 import { getAnalytics, isSupported } from "firebase/analytics";
 
@@ -28,6 +30,14 @@ const firebaseConfig = {
 // Initialize Firebase only once (for hot reload/dev)
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const auth = getAuth(app);
+
+// Set session persistence (user will be logged out when browser/tab is closed)
+if (typeof window !== "undefined") {
+  setPersistence(auth, browserSessionPersistence)
+    .catch((error) => {
+      console.error("Error setting auth persistence:", error);
+    });
+}
 
 // Initialize analytics (only in browser)
 isSupported().then((yes) => {
