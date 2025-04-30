@@ -96,7 +96,7 @@ export default function LoginPage() {
   return (
     <>
       <div className="min-h-screen flex flex-col items-center bg-black text-white px-4 py-12">
-        <div className="flex items-center justify-center gap-x-4 p-5">
+        <div className="flex items-center justify-center gap-x-4">
           <Image src={LoginLogo} height={60} width={60} alt="login-image" />
           <h1 className="font-semibold text-5xl">LakeNine.Ai</h1>
         </div>
@@ -175,7 +175,7 @@ export default function LoginPage() {
         </form>
 
         {/* Footer Terms */}
-        <div className="mt-6 text-md text-gray-400 text-center">
+        <div className="text-md text-gray-400 text-center">
           <Link href="#" className="hover:underline">
             Terms of Service
           </Link>{" "}

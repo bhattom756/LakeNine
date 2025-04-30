@@ -38,10 +38,10 @@ export default function SignupPage() {
 
     if (hasNumber && hasUpperCase && hasLowerCase && hasSpecialChar && isLongEnough) {
       setPasswordStrength("strong");
-    } else if ((hasNumber && hasUpperCase && hasLowerCase) || 
-               (hasNumber && hasUpperCase && hasSpecialChar) || 
-               (hasNumber && hasLowerCase && hasSpecialChar) || 
-               (hasUpperCase && hasLowerCase && hasSpecialChar)) {
+    } else if ((hasNumber && hasUpperCase && hasLowerCase) ||
+      (hasNumber && hasUpperCase && hasSpecialChar) ||
+      (hasNumber && hasLowerCase && hasSpecialChar) ||
+      (hasUpperCase && hasLowerCase && hasSpecialChar)) {
       setPasswordStrength("medium");
     } else {
       setPasswordStrength("weak");
@@ -52,26 +52,26 @@ export default function SignupPage() {
     e.preventDefault();
     setError("");
     setIsLoading(true);
-    
+
     if (!email || !pwd) {
       toast.error("Email & password required");
       setIsLoading(false);
       return;
     }
-    
+
     if (passwordStrength !== "strong") {
       toast.error("Please choose a stronger password");
       setIsLoading(false);
       return;
     }
-    
+
     try {
       await registerWithEmail(email, pwd);
       toast.success("Account created successfully!");
       router.push("/"); // Redirect to home after signup
     } catch (err: any) {
       let errorMessage = "Failed to create account. Please try again.";
-      
+
       if (err.code === "auth/email-already-in-use") {
         errorMessage = "This email is already registered. Please log in instead.";
       } else if (err.code === "auth/invalid-email") {
@@ -83,7 +83,7 @@ export default function SignupPage() {
       } else if (err.code === "auth/network-request-failed") {
         errorMessage = "Network error. Please check your internet connection.";
       }
-      
+
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);
@@ -98,7 +98,7 @@ export default function SignupPage() {
       router.push("/");
     } catch (err: any) {
       let errorMessage = "Google sign-in failed. Please try again.";
-      
+
       if (err.code === "auth/popup-closed-by-user") {
         errorMessage = "Sign-in was cancelled. Please try again.";
       } else if (err.code === "auth/popup-blocked") {
@@ -108,7 +108,7 @@ export default function SignupPage() {
       } else if (err.code === "auth/network-request-failed") {
         errorMessage = "Network error. Please check your internet connection.";
       }
-      
+
       toast.error(errorMessage);
     } finally {
       setIsGoogleLoading(false);
@@ -118,13 +118,10 @@ export default function SignupPage() {
   return (
     <>
       <div className="min-h-screen flex flex-col items-center bg-black text-white px-4 py-12">
-        {/* Logo and Title */}
-        <div className="flex items-center justify-center gap-x-4 p-5">
+        <div className="flex items-center justify-center gap-x-4">
           <Image src={LoginLogo} height={60} width={60} alt="signup-image" />
           <h1 className="font-semibold text-5xl">LakeNine.Ai</h1>
         </div>
-
-        {/* Signup Form */}
         <form
           onSubmit={handleSignup}
           className="bg-[#1a1a1a] p-12 my-8 rounded-xl w-[30rem] space-y-4 shadow-lg"
@@ -148,28 +145,26 @@ export default function SignupPage() {
             value={pwd}
             onChange={(e) => setPwd(e.target.value)}
           />
-          
+
           {/* Password Strength Indicator */}
           {pwd && (
             <div className="mt-1">
               <div className="flex items-center">
                 <div className="flex-1 h-2 bg-gray-700 rounded-full overflow-hidden">
-                  <div 
-                    className={`h-full transition-all duration-300 ${
-                      passwordStrength === "weak" ? "w-1/3 bg-red-500" : 
-                      passwordStrength === "medium" ? "w-2/3 bg-yellow-500" : 
-                      passwordStrength === "strong" ? "w-full bg-green-500" : ""
-                    }`}
+                  <div
+                    className={`h-full transition-all duration-300 ${passwordStrength === "weak" ? "w-1/3 bg-red-500" :
+                        passwordStrength === "medium" ? "w-2/3 bg-yellow-500" :
+                          passwordStrength === "strong" ? "w-full bg-green-500" : ""
+                      }`}
                   ></div>
                 </div>
-                <span className={`ml-2 text-sm font-medium transition-all duration-300 ${
-                  passwordStrength === "weak" ? "text-red-500" : 
-                  passwordStrength === "medium" ? "text-yellow-500" : 
-                  passwordStrength === "strong" ? "text-green-500" : ""
-                }`}>
-                  {passwordStrength === "weak" ? "Weak" : 
-                   passwordStrength === "medium" ? "Medium" : 
-                   passwordStrength === "strong" ? "Strong" : ""}
+                <span className={`ml-2 text-sm font-medium transition-all duration-300 ${passwordStrength === "weak" ? "text-red-500" :
+                    passwordStrength === "medium" ? "text-yellow-500" :
+                      passwordStrength === "strong" ? "text-green-500" : ""
+                  }`}>
+                  {passwordStrength === "weak" ? "Weak" :
+                    passwordStrength === "medium" ? "Medium" :
+                      passwordStrength === "strong" ? "Strong" : ""}
                 </span>
               </div>
               <p className="text-xs text-gray-400 mt-1">
@@ -226,19 +221,16 @@ export default function SignupPage() {
           </div>
         </form>
 
-        {/* Footer Terms */}
-        <div className="mt-6 text-md text-gray-400 text-center">
-          By creating an account, you agree to the{" "}
-          <Link href="#" className="hover:underline">
-            Terms of Service
-          </Link>{" "}
-          and{" "}
-          <Link href="#" className="hover:underline">
-            Privacy Policy
-          </Link>
+        <div className="text-md text-gray-400 text-center">
+          <p>By creating an account, you agree to the</p>
+          <p>
+            <Link href="#" className="hover:underline">Terms of Service</Link> and{' '}
+            <Link href="#" className="hover:underline">Privacy Policy</Link>
+          </p>
         </div>
+
       </div>
-      <Toaster 
+      <Toaster
         position="top-center"
         toastOptions={{
           duration: 3000,
