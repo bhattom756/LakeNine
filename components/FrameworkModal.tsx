@@ -1,20 +1,16 @@
-import React, { useState } from "react";
+"use client";
+
+import { useState } from "react";
 
 interface FrameworkModalProps {
   isOpen: boolean;
-  suggestedFrameworks: string[];
-  onConfirm: (frameworks: string[]) => void;
   onClose: () => void;
+  onConfirm: (frameworks: string[]) => void;
 }
 
-const FrameworkModal: React.FC<FrameworkModalProps> = ({
-  isOpen,
-  suggestedFrameworks,
-  onConfirm,
-  onClose,
-}) => {
-  const [frameworks, setFrameworks] = useState<string[]>(suggestedFrameworks);
-  const [input, setInput] = useState<string>(suggestedFrameworks.join(", "));
+export default function FrameworkModal({ isOpen, onClose, onConfirm }: FrameworkModalProps) {
+  const defaultFrameworks = ["React", "Next.js", "TypeScript", "Tailwind CSS"];
+  const [input, setInput] = useState<string>(defaultFrameworks.join(", "));
 
   const handleConfirm = () => {
     const fwList = input
@@ -27,28 +23,25 @@ const FrameworkModal: React.FC<FrameworkModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
-      <div className="bg-white text-black rounded-lg shadow-lg p-6 w-full max-w-md">
-        <h2 className="text-lg font-semibold mb-2">Confirm Frameworks & Libraries</h2>
-        <p className="mb-2 text-sm text-gray-700">
-          AI suggests the following frameworks/libraries for your project. You can edit the list below:
-        </p>
-        <input
-          className="w-full border border-gray-300 rounded px-2 py-1 mb-4"
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-[#1a1a1a] p-6 rounded-xl w-full max-w-md">
+        <h2 className="text-xl font-semibold mb-4 text-gray-300">Select Frameworks</h2>
+        <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="e.g. React, Tailwind CSS, Express"
+          placeholder="Enter frameworks separated by commas..."
+          className="w-full p-3 rounded-lg bg-[#2a2a2a] border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent resize-none"
         />
-        <div className="flex justify-end gap-2">
+        <div className="mt-4 flex justify-end gap-3">
           <button
-            className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
             onClick={onClose}
+            className="px-4 py-2 rounded-lg bg-[#1a1a1a] text-gray-300 hover:bg-[#2a2a2a] transition-colors duration-200 border border-gray-700"
           >
             Cancel
           </button>
           <button
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
             onClick={handleConfirm}
+            className="px-4 py-2 rounded-lg bg-[#1e3a8a] text-white hover:bg-[#1e40af] transition-colors duration-200"
           >
             Confirm
           </button>
@@ -56,6 +49,4 @@ const FrameworkModal: React.FC<FrameworkModalProps> = ({
       </div>
     </div>
   );
-};
-
-export default FrameworkModal; 
+} 

@@ -12,78 +12,44 @@ interface Props {
 }
 
 export default function PromptInput({
-  prompt, setPrompt,
-  setGeneratedCode, setFileStructure, setTestResults,
+  prompt,
+  setPrompt,
+  setGeneratedCode,
+  setFileStructure,
+  setTestResults,
 }: Props) {
-  const [loading, setLoading] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [suggestedFrameworks, setSuggestedFrameworks] = useState<string[]>([]);
-  const [confirmedFrameworks, setConfirmedFrameworks] = useState<string[]>([]);
-
-  const handleGenerate = async () => {
-    if (!prompt.trim()) return;
-    setLoading(true);
-    try {
-      // Step 1: Detect frameworks (mocked for now)
-      const res = await fetch("/api/detect-frameworks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
-      });
-      if (!res.ok) throw new Error(`Error ${res.status}`);
-      const data = await res.json();
-      setSuggestedFrameworks(data.frameworks || []);
-      setModalOpen(true);
-    } catch (e: any) {
-      console.error("Error detecting frameworks:", e.message);
-      setLoading(false);
-    }
-  };
-
-  const handleFrameworkConfirm = async (frameworks: string[]) => {
-    setModalOpen(false);
-    setConfirmedFrameworks(frameworks);
-    setLoading(true);
-    try {
-      // Step 2: Generate code with confirmed frameworks (mocked for now)
-      const res = await fetch("/api/genCode", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt, frameworks }),
-      });
-      if (!res.ok) throw new Error(`Error ${res.status}`);
-      const data = await res.json();
-      setGeneratedCode(data.code);
-      setFileStructure(data.fileStructure);
-      setTestResults(data.testResults);
-    } catch (e: any) {
-      console.error("Error generating code:", e.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
-    <div>
+    <div className="space-y-4">
       <textarea
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
-        placeholder="Enter your prompt..."
-        className="w-full p-2 bg-gray-800 text-white rounded"
-        rows={4}
+        placeholder="Describe what you want to build..."
+        className="w-full h-32 p-3 rounded-lg bg-[#1a1a1a] border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent resize-none"
       />
-      <button
-        onClick={handleGenerate}
-        disabled={loading}
-        className="mt-2 w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded"
-      >
-        {loading ? "Generating..." : "Generate"}
-      </button>
+      <div className="flex gap-3">
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="px-4 py-2 rounded-lg bg-[#1a1a1a] text-gray-300 hover:bg-[#2a2a2a] transition-colors duration-200 border border-gray-700"
+        >
+          Select Framework
+        </button>
+        <button
+          onClick={() => {
+            // Handle code generation
+            setGeneratedCode("// Generated code will appear here");
+            setFileStructure(["src/", "package.json"]);
+            setTestResults(["Test 1: Passed", "Test 2: Passed"]);
+          }}
+          className="px-4 py-2 rounded-lg bg-[#1e3a8a] text-white hover:bg-[#1e40af] transition-colors duration-200"
+        >
+          Generate Code
+        </button>
+      </div>
       <FrameworkModal
-        isOpen={modalOpen}
-        suggestedFrameworks={suggestedFrameworks}
-        onConfirm={handleFrameworkConfirm}
-        onClose={() => setModalOpen(false)}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
       />
     </div>
   );

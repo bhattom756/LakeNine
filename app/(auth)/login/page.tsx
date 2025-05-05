@@ -100,6 +100,7 @@ export default function LoginPage() {
           <Image src={LoginLogo} height={60} width={60} alt="login-image" />
           <h1 className="font-semibold text-5xl">LakeNine.Ai</h1>
         </div>
+        
 
         {/* Login Form */}
         <form

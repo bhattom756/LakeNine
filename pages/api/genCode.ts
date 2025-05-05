@@ -10,26 +10,24 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  // 1. Reject non-POST methods
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method Not Allowed" });
   }
 
-  // 2. Parse & validate body
+
   const { prompt } = req.body as { prompt?: string };
   if (!prompt || typeof prompt !== "string") {
     return res.status(400).json({ error: "Prompt is required." });
   }
 
   try {
-    // 3. Call OpenAI (replace model as you like)
     const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo", // ✅ Use this
+      model: "gpt-4o", 
       messages: [
-        { role: "system", content: "You are a web development assistant." },
+        { role: "system", content: "You are DevOPs Enginner with world class UI/UX designing knowledge of applications." },
         {
           role: "user",
-          content: `Generate a complete HTML, CSS, JS website for: "${prompt}"`,
+          content: `"${prompt}" make sure to select a unique color pallete, think what sections does the required websites have, then build using modern designs.`,
         },
       ],
     });
