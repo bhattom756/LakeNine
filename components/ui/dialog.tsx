@@ -32,7 +32,7 @@ const DialogContent = React.forwardRef<React.ElementRef<typeof DialogPrimitive.C
         )}
         {...props}
       >
-        {children}
+        {React.Children.count(children) > 1 ? <div className="w-full">{children}</div> : children}
       </DialogPrimitive.Content>
     </DialogPortal>
   )

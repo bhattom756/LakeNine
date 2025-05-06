@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import FrameworkModal from "./FrameworkModal";
 
 interface Props {
   prompt: string;
@@ -18,8 +17,6 @@ export default function PromptInput({
   setFileStructure,
   setTestResults,
 }: Props) {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
   return (
     <div className="space-y-4">
       <textarea
@@ -29,12 +26,6 @@ export default function PromptInput({
         className="w-full h-32 p-3 rounded-lg bg-[#1a1a1a] border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent resize-none"
       />
       <div className="flex gap-3">
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="px-4 py-2 rounded-lg bg-[#1a1a1a] text-gray-300 hover:bg-[#2a2a2a] transition-colors duration-200 border border-gray-700"
-        >
-          Select Framework
-        </button>
         <button
           onClick={() => {
             // Handle code generation
@@ -47,10 +38,6 @@ export default function PromptInput({
           Generate Code
         </button>
       </div>
-      <FrameworkModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-      />
     </div>
   );
 }

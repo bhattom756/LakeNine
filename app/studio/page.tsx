@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import FileTree from '@/components/FileTree';
 import LivePreview from '@/components/LivePreview';
 import TestResults from '@/components/TestResults';
@@ -21,17 +21,56 @@ export default function StudioPage() {
   const [rightWidth, setRightWidth] = useState(25);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
-  const [fileContents, setFileContents] = useState<{ [filePath: string]: string }>({});
+  const [projectFiles, setProjectFiles] = useState<Record<string, string>>({});
+  
+  // Separate state for tracking if files have been initialized
+  const [filesInitialized, setFilesInitialized] = useState(false);
 
+  // Use useCallback for the file click handler
+  const handleFileClick = useCallback((filePath: string) => {
+    setSelectedFile(filePath);
+  }, []);
+
+  // Fix the infinite loop by ensuring this effect only runs when necessary
   useEffect(() => {
-    if (generatedCode) {
-      setFileContents((prev) => ({
-        ...prev,
-        'src/pages/index.tsx': generatedCode,
-        'src/components/Header.tsx': `import Link from 'next/link';\nimport { useState } from 'react';\n\nconst Header = () => {\n  const [isMenuOpen, setIsMenuOpen] = useState(false);\n\n  return (\n    <header className=\"bg-gray-900 text-white\">\n      <div className=\"container mx-auto px-4 py-4\">\n        <div className=\"flex justify-between items-center\">\n          <Link href=\"/\" className=\"text-2xl font-bold\">\n            FitLife Gym\n          </Link>\n          {/* ... */}\n        </div>\n      </div>\n    </header>\n  );\n};\n\nexport default Header;`,
-      }));
+    if (generatedCode && fileStructure.length > 0 && !filesInitialized) {
+      // Only initialize default files if they haven't been initialized yet
+      const defaultFiles: Record<string, string> = {};
+      
+      // If no project files explicitly set, create an example file
+      if (Object.keys(projectFiles).length === 0) {
+        const mainFile = fileStructure.find(f => 
+          f === 'index.html' || f === 'src/App.js' || f === 'src/index.js'
+        );
+        
+        if (mainFile) {
+          defaultFiles[mainFile] = generatedCode;
+        }
+        
+        // Add empty content for CSS and JS files to prevent 404s
+        if (fileStructure.includes('css/styles.css')) {
+          defaultFiles['css/styles.css'] = '/* CSS styles will go here */';
+        }
+        
+        if (fileStructure.includes('js/script.js')) {
+          defaultFiles['js/script.js'] = '// JavaScript will go here';
+        }
+        
+        setProjectFiles(prev => ({
+          ...defaultFiles,
+          ...prev
+        }));
+        
+        // Mark files as initialized to prevent infinite loop
+        setFilesInitialized(true);
+      }
     }
-  }, [generatedCode]);
+  }, [generatedCode, fileStructure, filesInitialized]);
+  
+  // Reset filesInitialized when chat is opened
+  const handleChatOpen = useCallback(() => {
+    setIsChatOpen(true);
+  }, []);
 
   return (
     <div className="bg-black text-white min-h-screen overflow-hidden">
@@ -48,7 +87,7 @@ export default function StudioPage() {
           <div className="flex-1 overflow-auto p-4">
             <FileTree 
               fileStructure={fileStructure} 
-              onFileClick={(filePath) => setSelectedFile(filePath)}
+              onFileClick={handleFileClick}
             />
           </div>
         </div>
@@ -84,7 +123,7 @@ export default function StudioPage() {
         >
           <h2 className="text-lg font-semibold mb-4 text-gray-300">Live Preview</h2>
           <div className="h-full bg-white rounded overflow-hidden">
-            <LivePreview generatedCode={generatedCode} />
+            <LivePreview generatedCode={generatedCode} projectFiles={projectFiles} />
           </div>
         </div>
 
@@ -126,7 +165,7 @@ export default function StudioPage() {
 
       {/* Floating Chat Button */}
       <button
-        onClick={() => setIsChatOpen(true)}
+        onClick={handleChatOpen}
         className="fixed bottom-4 right-4 p-3 bg-[#1e3a8a] text-white rounded-full hover:bg-[#1e40af] transition-colors duration-200 shadow-lg"
       >
         <svg
@@ -148,16 +187,25 @@ export default function StudioPage() {
       {/* Chat Interface */}
       <ChatInterface
         isOpen={isChatOpen}
-        onClose={() => setIsChatOpen(false)}
+        onClose={() => {
+          setIsChatOpen(false);
+          // Reset the filesInitialized flag when closing the chat
+          // This allows a new chat session to set up new files
+          setFilesInitialized(false);
+        }}
         setGeneratedCode={setGeneratedCode}
         setFileStructure={setFileStructure}
         setTestResults={setTestResults}
+        setProjectFiles={files => {
+          setProjectFiles(files);
+          setFilesInitialized(true);
+        }}
       />
 
       {/* File Viewer Dialog */}
       <FileViewerDialog
         fileName={selectedFile || ''}
-        fileContent={selectedFile ? (fileContents[selectedFile] || '// No content available') : ''}
+        fileContent={selectedFile ? (projectFiles[selectedFile] || '// No content available') : ''}
         open={!!selectedFile}
         onClose={() => setSelectedFile(null)}
       />

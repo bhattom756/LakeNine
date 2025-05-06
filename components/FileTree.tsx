@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback, useMemo, memo } from 'react';
 import { ChevronDown, ChevronRight, Folder, File as FileIcon } from 'lucide-react';
 
 interface FileTreeProps {
@@ -27,13 +27,24 @@ function buildTree(paths: string[]) {
   return root;
 }
 
-function TreeNode({ node, path, onFileClick, openFolders, setOpenFolders }: any) {
+// Memoize the TreeNode component to prevent unnecessary re-renders
+const TreeNode = memo(({ node, path, onFileClick, openFolders, toggleFolder }: any) => {
   return (
     <ul className="pl-2">
       {Object.entries(node).map(([name, child]: any) => {
         const isFolder = child !== null;
         const fullPath = path ? `${path}/${name}` : name;
         const isOpen = openFolders[fullPath];
+        
+        // Create handler functions outside of the JSX
+        const handleClick = () => {
+          if (isFolder) {
+            toggleFolder(fullPath);
+          } else if (onFileClick) {
+            onFileClick(fullPath);
+          }
+        };
+        
         return (
           <li key={fullPath}>
             <div
@@ -42,13 +53,7 @@ function TreeNode({ node, path, onFileClick, openFolders, setOpenFolders }: any)
                   ? 'text-yellow-400/80 hover:text-yellow-300'
                   : 'text-blue-400/80 hover:text-blue-300'
               }`}
-              onClick={() => {
-                if (isFolder) {
-                  setOpenFolders((prev: any) => ({ ...prev, [fullPath]: !isOpen }));
-                } else if (onFileClick) {
-                  onFileClick(fullPath);
-                }
-              }}
+              onClick={handleClick}
             >
               {isFolder ? (
                 <>
@@ -69,7 +74,7 @@ function TreeNode({ node, path, onFileClick, openFolders, setOpenFolders }: any)
                 path={fullPath}
                 onFileClick={onFileClick}
                 openFolders={openFolders}
-                setOpenFolders={setOpenFolders}
+                toggleFolder={toggleFolder}
               />
             )}
           </li>
@@ -77,19 +82,39 @@ function TreeNode({ node, path, onFileClick, openFolders, setOpenFolders }: any)
       })}
     </ul>
   );
-}
+});
+
+TreeNode.displayName = 'TreeNode';
 
 export default function FileTree({ fileStructure, onFileClick }: FileTreeProps) {
   const [openFolders, setOpenFolders] = useState<{ [key: string]: boolean }>({});
-  const tree = buildTree(fileStructure);
+  
+  // Memoize the tree construction
+  const tree = useMemo(() => buildTree(fileStructure), [fileStructure]);
+  
+  // Create a stable toggleFolder function using useCallback
+  const toggleFolder = useCallback((path: string) => {
+    setOpenFolders((prev) => ({ 
+      ...prev, 
+      [path]: !prev[path] 
+    }));
+  }, []);
+  
+  // Create a stable onFileClick callback if it's provided
+  const handleFileClick = useCallback((path: string) => {
+    if (onFileClick) {
+      onFileClick(path);
+    }
+  }, [onFileClick]);
+  
   return (
     <div className="text-white text-sm">
       <TreeNode
         node={tree}
         path=""
-        onFileClick={onFileClick}
+        onFileClick={handleFileClick}
         openFolders={openFolders}
-        setOpenFolders={setOpenFolders}
+        toggleFolder={toggleFolder}
       />
     </div>
   );
