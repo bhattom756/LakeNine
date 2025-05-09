@@ -1,1149 +1,680 @@
 import { ChatResponse } from '../types/chat';
+import OpenAI from 'openai';
 
-// This function simulates an API call to generate a project with AI
-export async function generateProjectWithAI(prompt: string): Promise<ChatResponse> {
-  // In a real implementation, this would make an API call to an AI service
-  // For now, we'll simulate a response with pre-defined templates
-  
-  await new Promise(resolve => setTimeout(resolve, 3000)); // Simulate API latency
-  
-  // Better detection of requested technologies
-  const lowerPrompt = prompt.toLowerCase();
-  
-  // Explicitly detect HTML/CSS/JS request
-  const isBasicWeb = lowerPrompt.includes('html') && lowerPrompt.includes('css') && lowerPrompt.includes('js') || 
-                     !lowerPrompt.includes('react') && !lowerPrompt.includes('next') && 
-                     !lowerPrompt.includes('vue') && !lowerPrompt.includes('angular');
-  
-  // Only set isReact true if explicitly mentioned AND basic web is not requested
-  const isReact = !isBasicWeb && lowerPrompt.includes('react');
-  
-  const isGymWebsite = lowerPrompt.includes('gym') || lowerPrompt.includes('fitness');
-  const isTailwind = lowerPrompt.includes('tailwind');
-  
-  // Generate a plan based on the prompt
-  const plan = generatePlan(isGymWebsite, isReact, isTailwind);
-  
-  // Generate files based on the prompt and plan
-  const files = generateFiles(isGymWebsite, isReact, isTailwind);
-  
-  return {
-    plan,
-    files
-  };
-}
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-function generatePlan(isGym: boolean, isReact: boolean, isTailwind: boolean): string {
-  const framework = isReact ? 'React' : 'vanilla HTML/CSS/JS';
-  const styling = isTailwind ? 'Tailwind CSS' : 'custom CSS';
-  const websiteType = isGym ? 'Gym/Fitness' : 'Generic';
-  
-  return `
-# Project Plan for ${websiteType} Website
-
-## Technology Stack
-- Framework: ${framework}
-- Styling: ${styling}
-- Images: Dynamic images from Pexels API
-- Font: Inter, Roboto
-
-## File Structure
-${isReact ? `
-- public/
-  - index.html
-  - favicon.ico
-  - manifest.json
-- src/
-  - components/
-    - Navbar.${isReact ? 'jsx' : 'js'}
-    - Hero.${isReact ? 'jsx' : 'js'}
-    - Features.${isReact ? 'jsx' : 'js'}
-    - Testimonials.${isReact ? 'jsx' : 'js'}
-    - Pricing.${isReact ? 'jsx' : 'js'}
-    - Contact.${isReact ? 'jsx' : 'js'}
-    - Footer.${isReact ? 'jsx' : 'js'}
-  - assets/
-    - styles/
-      - main.css
-    - images/
-      - logo.png
-  - App.${isReact ? 'jsx' : 'js'}
-  - index.${isReact ? 'jsx' : 'js'}
-  - ${isTailwind ? 'tailwind.config.js' : ''}
-` : `
-- index.html
-- css/
-  - styles.css
-- js/
-  - main.js
-  - nav.js
-- assets/
-  - images/
-    - logo.png
-`}
-
-## Implementation Steps
-1. Set up project structure
-2. Create core components
-3. Implement responsive layouts
-4. Add dynamic content
-5. Optimize for performance
-`;
-}
-
-function generateFiles(isGym: boolean, isReact: boolean, isTailwind: boolean): Record<string, string> {
-  const files: Record<string, string> = {};
-  
-  if (isReact) {
-    // Add React files
-    files['src/index.js'] = `
-import React from 'react';
-import ReactDOM from 'react-dom';
-import './assets/styles/main.css';
-import App from './App';
-
-ReactDOM.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-  document.getElementById('root')
-);
-    `;
-    
-    files['src/App.js'] = `
-import React from 'react';
-import Navbar from './components/Navbar';
-import Hero from './components/Hero';
-import Features from './components/Features';
-import Testimonials from './components/Testimonials';
-import Pricing from './components/Pricing';
-import Contact from './components/Contact';
-import Footer from './components/Footer';
-
-function App() {
-  return (
-    <div className="App">
-      <Navbar />
-      <Hero />
-      <Features />
-      <Testimonials />
-      <Pricing />
-      <Contact />
-      <Footer />
+// High-quality examples of different website sections
+const DESIGN_EXAMPLES = {
+  // Hero section examples
+  hero: {
+    html: `<!-- Apple-quality Hero Section -->
+<section class="hero">
+  <div class="hero-content">
+    <h1 class="hero-title">Experience the Future</h1>
+    <p class="hero-subtitle">Groundbreaking design meets unparalleled performance</p>
+    <div class="hero-cta">
+      <a href="#" class="btn btn-primary">Learn more</a>
+      <a href="#" class="btn btn-secondary">Buy now</a>
     </div>
-  );
-}
-
-export default App;
-    `;
+  </div>
+  <div class="hero-image">
+    <img src="/*IMAGE:product*/" alt="Product showcase" class="product-image">
+    <div class="hero-gradient"></div>
+  </div>
+</section>`,
     
-    // Add component files
-    files['src/components/Navbar.jsx'] = `
-import React, { useState } from 'react';
-
-export default function Navbar() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  
-  return (
-    <nav className="${isTailwind ? 'bg-white shadow-md py-4 px-6 fixed w-full z-10' : 'navbar'}">
-      <div className="${isTailwind ? 'flex justify-between items-center max-w-7xl mx-auto' : 'navbar-container'}">
-        <div className="${isTailwind ? 'text-xl font-bold text-blue-600' : 'logo'}">
-          ${isGym ? 'FitLife Gym' : 'Company Name'}
-        </div>
-        
-        <div className="${isTailwind ? 'hidden md:flex space-x-8' : 'nav-links'}">
-          <a href="#" className="${isTailwind ? 'text-gray-600 hover:text-blue-600' : 'nav-link'}">Home</a>
-          <a href="#features" className="${isTailwind ? 'text-gray-600 hover:text-blue-600' : 'nav-link'}">Features</a>
-          <a href="#testimonials" className="${isTailwind ? 'text-gray-600 hover:text-blue-600' : 'nav-link'}">Testimonials</a>
-          <a href="#pricing" className="${isTailwind ? 'text-gray-600 hover:text-blue-600' : 'nav-link'}">Pricing</a>
-          <a href="#contact" className="${isTailwind ? 'text-gray-600 hover:text-blue-600' : 'nav-link'}">Contact</a>
-        </div>
-        
-        <button 
-          className="${isTailwind ? 'md:hidden text-gray-500 focus:outline-none' : 'mobile-menu-button'}"
-          onClick={() => setIsMenuOpen(!isMenuOpen)}
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
-      </div>
-      
-      {isMenuOpen && (
-        <div className="${isTailwind ? 'md:hidden bg-white py-2 px-4 absolute w-full' : 'mobile-menu'}">
-          <a href="#" className="${isTailwind ? 'block py-2 text-gray-600 hover:text-blue-600' : 'mobile-link'}">Home</a>
-          <a href="#features" className="${isTailwind ? 'block py-2 text-gray-600 hover:text-blue-600' : 'mobile-link'}">Features</a>
-          <a href="#testimonials" className="${isTailwind ? 'block py-2 text-gray-600 hover:text-blue-600' : 'mobile-link'}">Testimonials</a>
-          <a href="#pricing" className="${isTailwind ? 'block py-2 text-gray-600 hover:text-blue-600' : 'mobile-link'}">Pricing</a>
-          <a href="#contact" className="${isTailwind ? 'block py-2 text-gray-600 hover:text-blue-600' : 'mobile-link'}">Contact</a>
-        </div>
-      )}
-    </nav>
-  );
-}
-    `;
-    
-    files['src/components/Hero.jsx'] = `
-import React from 'react';
-
-export default function Hero() {
-  return (
-    <section className="${isTailwind ? 'pt-20 pb-12 md:pt-32 md:pb-24 bg-gray-50' : 'hero-section'}" id="hero">
-      <div className="${isTailwind ? 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8' : 'container'}">
-        <div className="${isTailwind ? 'flex flex-col md:flex-row items-center justify-between' : 'hero-content'}">
-          <div className="${isTailwind ? 'md:w-1/2 mb-8 md:mb-0 text-center md:text-left' : 'hero-text'}">
-            <h1 className="${isTailwind ? 'text-4xl md:text-5xl font-bold text-gray-900 leading-tight' : 'hero-title'}">
-              ${isGym 
-                ? 'Transform Your Body, Transform Your Life' 
-                : 'Welcome to Our Website'}
-            </h1>
-            <p className="${isTailwind ? 'mt-4 text-xl text-gray-600 max-w-lg' : 'hero-subtitle'}">
-              ${isGym 
-                ? 'Join our fitness community and achieve your health goals with expert trainers and state-of-the-art equipment.' 
-                : 'We provide the best services for our customers with high quality and support.'}
-            </p>
-            <div className="${isTailwind ? 'mt-8 flex flex-col sm:flex-row justify-center md:justify-start space-y-4 sm:space-y-0 sm:space-x-4' : 'hero-buttons'}">
-              <a href="#pricing" className="${isTailwind ? 'px-8 py-3 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 transition-colors' : 'primary-button'}">
-                ${isGym ? 'Join Now' : 'Get Started'}
-              </a>
-              <a href="#contact" className="${isTailwind ? 'px-8 py-3 bg-white text-blue-600 border border-blue-600 rounded-md font-medium hover:bg-gray-50 transition-colors' : 'secondary-button'}">
-                Contact Us
-              </a>
-            </div>
-          </div>
-          <div className="${isTailwind ? 'md:w-1/2' : 'hero-image'}">
-            <img 
-              src="https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1" 
-              alt="Hero image" 
-              className="${isTailwind ? 'rounded-lg shadow-xl' : 'img-fluid'}"
-            />
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-    `;
-    
-    // Add more component files here
-    files['src/components/Features.jsx'] = `
-import React from 'react';
-
-export default function Features() {
-  const features = [
-    {
-      title: ${isGym ? '"State-of-the-art Equipment"' : '"Feature One"'},
-      description: ${isGym ? 
-        '"Access to the latest fitness technology and premium equipment for effective workouts."' : 
-        '"Description of feature one and its benefits to the users."'},
-      icon: "💪"
-    },
-    {
-      title: ${isGym ? '"Expert Trainers"' : '"Feature Two"'},
-      description: ${isGym ? 
-        '"Professional trainers to guide your fitness journey and help you achieve your goals."' : 
-        '"Description of feature two and its benefits to the users."'},
-      icon: "👨‍🏫"
-    },
-    {
-      title: ${isGym ? '"Flexible Memberships"' : '"Feature Three"'},
-      description: ${isGym ? 
-        '"Choose from a variety of membership options that fit your schedule and budget."' : 
-        '"Description of feature three and its benefits to the users."'},
-      icon: "📅"
-    }
-  ];
-
-  return (
-    <section className="${isTailwind ? 'py-16 bg-white' : 'features-section'}" id="features">
-      <div className="${isTailwind ? 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8' : 'container'}">
-        <div className="${isTailwind ? 'text-center mb-16' : 'section-header'}">
-          <h2 className="${isTailwind ? 'text-3xl font-bold text-gray-900' : 'section-title'}">
-            ${isGym ? 'Why Choose Our Gym?' : 'Our Features'}
-          </h2>
-          <p className="${isTailwind ? 'mt-4 text-xl text-gray-600 max-w-2xl mx-auto' : 'section-subtitle'}">
-            ${isGym ? 
-              'We offer the best fitness experience with premium facilities and expert guidance.' : 
-              'Discover what makes our services stand out from the competition.'}
-          </p>
-        </div>
-        
-        <div className="${isTailwind ? 'grid md:grid-cols-3 gap-8' : 'features-grid'}">
-          {features.map((feature, index) => (
-            <div key={index} className="${isTailwind ? 'bg-gray-50 rounded-lg p-8 shadow-sm hover:shadow-md transition-shadow' : 'feature-card'}">
-              <div className="${isTailwind ? 'text-4xl mb-4' : 'feature-icon'}">{feature.icon}</div>
-              <h3 className="${isTailwind ? 'text-xl font-semibold text-gray-900 mb-2' : 'feature-title'}">{feature.title}</h3>
-              <p className="${isTailwind ? 'text-gray-600' : 'feature-description'}">{feature.description}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-    `;
-    
-  } else {
-    // Add HTML/CSS/JS files - make more complete and modern
-    files['index.html'] = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${isGym ? 'FitLife Gym - Your Path to Fitness' : 'My Website'}</title>
-  <link rel="stylesheet" href="css/styles.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <!-- Replace problematic FontAwesome with a working CDN -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-</head>
-<body>
-  <header>
-    <nav class="navbar">
-      <div class="container">
-        <div class="logo">
-          ${isGym ? 'FitLife<span>Gym</span>' : 'My Website'}
-        </div>
-        <ul class="nav-links">
-          <li><a href="#" class="active">Home</a></li>
-          <li><a href="#about">About</a></li>
-          <li><a href="#classes">Classes</a></li>
-          <li><a href="#trainers">Trainers</a></li>
-          <li><a href="#pricing">Pricing</a></li>
-          <li><a href="#contact">Contact</a></li>
-        </ul>
-        <div class="hamburger">
-          <span class="bar"></span>
-          <span class="bar"></span>
-          <span class="bar"></span>
-        </div>
-      </div>
-    </nav>
-  </header>
-
-  <section class="hero" id="home">
-    <div class="container">
-      <div class="hero-content">
-        <div class="hero-text">
-          <h1>${isGym ? 'Build Your Body <span>Transform Your Life</span>' : 'Welcome to My Website'}</h1>
-          <p>${isGym ? 'Join our fitness community today and achieve your health goals with expert trainers and state-of-the-art equipment.' : 'This is a custom website built with HTML, CSS and JavaScript.'}</p>
-          <div class="hero-btns">
-            <a href="#pricing" class="btn btn-primary">${isGym ? 'Join Now' : 'Get Started'}</a>
-            <a href="#contact" class="btn btn-secondary">Contact Us</a>
-          </div>
-        </div>
-        <div class="hero-image">
-          <img src="https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg" alt="Hero">
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="features" id="about">
-    <div class="container">
-      <div class="section-header">
-        <h2>${isGym ? 'Why Choose Us' : 'Our Features'}</h2>
-        <p>${isGym ? 'We offer the best fitness experience with premium facilities and expert guidance.' : 'What makes us different from others'}</p>
-      </div>
-      <div class="features-grid">
-        <div class="feature-card">
-          <div class="feature-icon">💪</div>
-          <h3>${isGym ? 'Modern Equipment' : 'Feature One'}</h3>
-          <p>${isGym ? 'State-of-the-art fitness equipment for all your workout needs.' : 'Description of the first main feature of your service.'}</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">🏋️</div>
-          <h3>${isGym ? 'Expert Trainers' : 'Feature Two'}</h3>
-          <p>${isGym ? 'Professional trainers to guide you through your fitness journey.' : 'Description of the second main feature of your service.'}</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">🍎</div>
-          <h3>${isGym ? 'Nutrition Plans' : 'Feature Three'}</h3>
-          <p>${isGym ? 'Custom nutrition plans tailored to your specific fitness goals.' : 'Description of the third main feature of your service.'}</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="cta">
-    <div class="container">
-      <h2>${isGym ? 'Ready to start your fitness journey?' : 'Ready to get started?'}</h2>
-      <p>${isGym ? 'Join our gym today and transform your life with our expert guidance.' : 'Take the first step towards achieving your goals.'}</p>
-      <a href="#contact" class="btn btn-primary">${isGym ? 'Join Now' : 'Get Started'}</a>
-    </div>
-  </section>
-
-  <footer>
-    <div class="container">
-      <div class="footer-grid">
-        <div class="footer-about">
-          <div class="logo">${isGym ? 'FitLife<span>Gym</span>' : 'My Website'}</div>
-          <p>${isGym ? 'Your premier fitness destination committed to helping you achieve your health and fitness goals.' : 'A brief description of your company or personal brand.'}</p>
-          <div class="social-links">
-            <a href="#"><i class="fab fa-facebook"></i></a>
-            <a href="#"><i class="fab fa-twitter"></i></a>
-            <a href="#"><i class="fab fa-instagram"></i></a>
-            <a href="#"><i class="fab fa-linkedin"></i></a>
-          </div>
-        </div>
-        <div class="footer-links">
-          <h3>Quick Links</h3>
-          <ul>
-            <li><a href="#">Home</a></li>
-            <li><a href="#about">About</a></li>
-            <li><a href="#classes">Classes</a></li>
-            <li><a href="#pricing">Pricing</a></li>
-            <li><a href="#contact">Contact</a></li>
-          </ul>
-        </div>
-        <div class="footer-contact">
-          <h3>Contact Us</h3>
-          <p><i class="fas fa-map-marker-alt"></i> 123 Fitness Street, Gym City</p>
-          <p><i class="fas fa-phone"></i> (123) 456-7890</p>
-          <p><i class="fas fa-envelope"></i> info@fitlifegym.com</p>
-        </div>
-      </div>
-      <div class="footer-bottom">
-        <p>&copy; 2023 ${isGym ? 'FitLife Gym' : 'My Website'}. All Rights Reserved.</p>
-      </div>
-    </div>
-  </footer>
-
-  <script src="js/script.js"></script>
-</body>
-</html>
-    `;
-    
-    files['css/styles.css'] = `/* Base styles */
-:root {
-  --primary-color: ${isGym ? '#ff5722' : '#4361ee'};
-  --secondary-color: ${isGym ? '#263238' : '#3a0ca3'};
-  --dark-color: #212121;
-  --light-color: #f5f5f5;
-  --text-color: #333;
-  --text-light: #666;
-  --max-width: 1200px;
-  --transition: all 0.3s ease;
-}
-
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-html {
-  scroll-behavior: smooth;
-}
-
-body {
-  font-family: 'Inter', sans-serif;
-  line-height: 1.6;
-  color: var(--text-color);
-  background-color: #fff;
-}
-
-a {
-  text-decoration: none;
-  color: var(--text-color);
-}
-
-ul {
-  list-style: none;
-}
-
-img {
-  max-width: 100%;
-  height: auto;
-}
-
-.container {
-  width: 90%;
-  max-width: var(--max-width);
-  margin: 0 auto;
-  padding: 0 20px;
-}
-
-section {
-  padding: 80px 0;
-}
-
-/* Button styles */
-.btn {
-  display: inline-block;
-  padding: 12px 30px;
-  border-radius: 5px;
-  cursor: pointer;
-  font-weight: 600;
-  transition: var(--transition);
-  text-align: center;
-}
-
-.btn-primary {
-  background-color: var(--primary-color);
-  color: white;
-  border: 2px solid var(--primary-color);
-}
-
-.btn-primary:hover {
-  background-color: transparent;
-  color: var(--primary-color);
-}
-
-.btn-secondary {
-  background-color: transparent;
-  color: var(--primary-color);
-  border: 2px solid var(--primary-color);
-}
-
-.btn-secondary:hover {
-  background-color: var(--primary-color);
-  color: white;
-}
-
-/* Header and Navigation */
-.navbar {
-  background-color: white;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-  position: fixed;
-  width: 100%;
-  z-index: 1000;
-  height: 80px;
+    css: `.hero {
+  height: 100vh;
   display: flex;
   align-items: center;
-}
-
-.navbar .container {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.logo {
-  font-size: 1.8rem;
-  font-weight: 700;
-  color: var(--dark-color);
-}
-
-.logo span {
-  color: var(--primary-color);
-}
-
-.nav-links {
-  display: flex;
-}
-
-.nav-links li a {
-  padding: 10px 15px;
-  margin: 0 5px;
-  color: var(--text-color);
-  font-weight: 500;
-  transition: var(--transition);
-}
-
-.nav-links li a:hover, .nav-links li a.active {
-  color: var(--primary-color);
-}
-
-.hamburger {
-  display: none;
-  cursor: pointer;
-}
-
-.bar {
-  display: block;
-  width: 25px;
-  height: 3px;
-  margin: 5px auto;
-  background-color: var(--dark-color);
-  transition: var(--transition);
-}
-
-/* Hero section */
-.hero {
-  padding-top: 150px;
-  padding-bottom: 100px;
-  background-color: var(--light-color);
+  position: relative;
+  overflow: hidden;
 }
 
 .hero-content {
+  max-width: 50%;
+  padding: 0 5rem;
+  z-index: 2;
+}
+
+.hero-title {
+  font-size: clamp(2.5rem, 5vw, 4.5rem);
+  font-weight: 700;
+  line-height: 1.1;
+  margin-bottom: 1.5rem;
+  background: linear-gradient(90deg, #000, #333);
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: fadeIn 0.8s ease-out forwards;
+}
+
+.hero-subtitle {
+  font-size: clamp(1rem, 2vw, 1.5rem);
+  margin-bottom: 2.5rem;
+  font-weight: 400;
+  color: #555;
+  animation: fadeIn 1s ease-out 0.3s forwards;
+  opacity: 0;
+}
+
+.hero-cta {
   display: flex;
-  align-items: center;
-  gap: 50px;
-}
-
-.hero-text {
-  flex: 1;
-}
-
-.hero-text h1 {
-  font-size: 3.5rem;
-  line-height: 1.2;
-  margin-bottom: 20px;
-  color: var(--dark-color);
-}
-
-.hero-text h1 span {
-  color: var(--primary-color);
-  display: block;
-}
-
-.hero-text p {
-  font-size: 1.1rem;
-  color: var(--text-light);
-  margin-bottom: 30px;
-  max-width: 600px;
-}
-
-.hero-btns {
-  display: flex;
-  gap: 15px;
+  gap: 1rem;
+  animation: fadeIn 1.2s ease-out 0.5s forwards;
+  opacity: 0;
 }
 
 .hero-image {
-  flex: 1;
+  position: absolute;
+  right: -5%;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 60%;
+  height: 80%;
+  animation: floatIn 1.5s ease-out forwards;
+  opacity: 0;
 }
 
-.hero-image img {
-  border-radius: 10px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+.product-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 20px 30px rgba(0,0,0,0.15));
 }
 
-/* Features section */
-.section-header {
+.hero-gradient {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, rgba(255,255,255,1) 0%, rgba(255,255,255,0.8) 50%, rgba(255,255,255,0) 100%);
+  z-index: -1;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes floatIn {
+  from { opacity: 0; transform: translate(50px, -50%); }
+  to { opacity: 1; transform: translate(0, -50%); }
+}`
+  },
+  
+  // Feature section examples
+  features: {
+    html: `<!-- Modern Feature Section -->
+<section class="features">
+  <div class="features-header">
+    <h2>Cutting-edge features</h2>
+    <p>Discover what makes our product exceptional</p>
+  </div>
+  
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg><!-- Icon SVG --></svg>
+      </div>
+      <h3>Stunning Design</h3>
+      <p>Sleek aesthetics combined with intuitive interfaces for an exceptional user experience.</p>
+    </div>
+    
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg><!-- Icon SVG --></svg>
+      </div>
+      <h3>Powerful Performance</h3>
+      <p>State-of-the-art technology ensuring seamless operations even under heavy workloads.</p>
+    </div>
+    
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg><!-- Icon SVG --></svg>
+      </div>
+      <h3>Smart Integration</h3>
+      <p>Effortlessly connects with your existing ecosystem for a unified experience.</p>
+    </div>
+  </div>
+</section>`,
+    
+    css: `.features {
+  padding: 8rem 0;
+  background-color: #f8f9fa;
+}
+
+.features-header {
   text-align: center;
-  margin-bottom: 60px;
+  max-width: 700px;
+  margin: 0 auto 5rem;
 }
 
-.section-header h2 {
+.features-header h2 {
   font-size: 2.5rem;
-  margin-bottom: 15px;
-  color: var(--dark-color);
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: #1a1a1a;
 }
 
-.section-header p {
-  color: var(--text-light);
-  max-width: 600px;
-  margin: 0 auto;
-  font-size: 1.1rem;
+.features-header p {
+  font-size: 1.2rem;
+  color: #555;
 }
 
 .features-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 30px;
+  gap: 2.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem;
 }
 
 .feature-card {
-  background-color: white;
-  padding: 30px;
-  border-radius: 10px;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-  transition: var(--transition);
-  text-align: center;
+  background: white;
+  border-radius: 12px;
+  padding: 2.5rem;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.feature-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 5px;
+  height: 0;
+  background: linear-gradient(45deg, #5e72e4, #8392ff);
+  transition: height 0.5s ease;
 }
 
 .feature-card:hover {
   transform: translateY(-10px);
-  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+  box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+}
+
+.feature-card:hover::before {
+  height: 100%;
 }
 
 .feature-icon {
-  font-size: 3rem;
-  margin-bottom: 20px;
-  color: var(--primary-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 70px;
+  height: 70px;
+  background: rgba(94, 114, 228, 0.1);
+  border-radius: 50%;
+  margin-bottom: 1.5rem;
 }
 
 .feature-card h3 {
   font-size: 1.5rem;
-  margin-bottom: 15px;
-  color: var(--dark-color);
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: #1a1a1a;
 }
 
 .feature-card p {
-  color: var(--text-light);
+  color: #555;
+  line-height: 1.6;
+}`
+  },
+  
+  // Testimonials section example  
+  testimonials: {
+    html: `<!-- Modern Testimonials Section -->
+<section class="testimonials">
+  <div class="testimonials-header">
+    <h2>What our customers say</h2>
+    <p>Join thousands of satisfied users worldwide</p>
+  </div>
+  
+  <div class="testimonials-slider">
+    <div class="testimonial-card">
+      <div class="testimonial-content">
+        <div class="quote-icon">"</div>
+        <p>This product has completely transformed how we operate. The intuitive interface and powerful features have increased our productivity by 200%.</p>
+      </div>
+      <div class="testimonial-author">
+        <img src="/*IMAGE:portrait*/" alt="Sarah Johnson" class="author-image">
+        <div class="author-info">
+          <h4>Sarah Johnson</h4>
+          <p>CEO, TechInnovate</p>
+        </div>
+      </div>
+    </div>
+    
+    <div class="testimonial-card">
+      <div class="testimonial-content">
+        <div class="quote-icon">"</div>
+        <p>As a designer, I appreciate the attention to detail and sleek aesthetics. But it's the performance that truly sets this apart from everything else on the market.</p>
+      </div>
+      <div class="testimonial-author">
+        <img src="/*IMAGE:portrait*/" alt="Michael Chen" class="author-image">
+        <div class="author-info">
+          <h4>Michael Chen</h4>
+          <p>Design Director, CreativeSphere</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="testimonials-dots">
+    <span class="dot active"></span>
+    <span class="dot"></span>
+    <span class="dot"></span>
+  </div>
+</section>`,
+    
+    css: `.testimonials {
+  padding: 8rem 0;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  overflow: hidden;
 }
 
-/* CTA section */
-.cta {
-  background-color: var(--primary-color);
-  color: white;
+.testimonials-header {
   text-align: center;
-  padding: 80px 0;
+  max-width: 700px;
+  margin: 0 auto 5rem;
 }
 
-.cta h2 {
+.testimonials-header h2 {
   font-size: 2.5rem;
-  margin-bottom: 15px;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: #1a1a1a;
 }
 
-.cta p {
-  margin-bottom: 30px;
-  max-width: 600px;
-  margin-left: auto;
-  margin-right: auto;
-  font-size: 1.1rem;
+.testimonials-header p {
+  font-size: 1.2rem;
+  color: #555;
 }
 
-.cta .btn-primary {
-  background-color: white;
-  color: var(--primary-color);
-  border-color: white;
-}
-
-.cta .btn-primary:hover {
-  background-color: transparent;
-  color: white;
-}
-
-/* Footer */
-footer {
-  background-color: var(--dark-color);
-  color: white;
-  padding: 80px 0 30px;
-}
-
-.footer-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 40px;
-  margin-bottom: 50px;
-}
-
-.footer-about .logo {
-  color: white;
-  font-size: 1.8rem;
-  margin-bottom: 15px;
-}
-
-.footer-about p {
-  margin-bottom: 20px;
-  color: rgba(255,255,255,0.7);
-}
-
-.social-links {
+.testimonials-slider {
   display: flex;
-  gap: 10px;
+  gap: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem;
+  overflow-x: hidden;
 }
 
-.social-links a {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background-color: rgba(255,255,255,0.1);
-  color: white;
-  transition: var(--transition);
+.testimonial-card {
+  flex: 0 0 100%;
+  max-width: 550px;
+  background: white;
+  border-radius: 12px;
+  padding: 2.5rem;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+  transition: all 0.3s ease;
+  transform: scale(0.95);
+  opacity: 0.7;
 }
 
-.social-links a:hover {
-  background-color: var(--primary-color);
+.testimonial-card:nth-child(2) {
+  transform: scale(1);
+  opacity: 1;
 }
 
-.footer-links h3, .footer-contact h3 {
-  font-size: 1.3rem;
-  margin-bottom: 20px;
+.testimonial-content {
   position: relative;
-  display: inline-block;
+  margin-bottom: 2rem;
 }
 
-.footer-links h3:after, .footer-contact h3:after {
-  content: '';
+.quote-icon {
   position: absolute;
-  left: 0;
-  bottom: -10px;
-  width: 50px;
-  height: 2px;
-  background-color: var(--primary-color);
+  top: -30px;
+  left: -10px;
+  font-size: 5rem;
+  color: rgba(94, 114, 228, 0.1);
+  font-family: Georgia, serif;
 }
 
-.footer-links ul li {
-  margin-bottom: 10px;
+.testimonial-content p {
+  font-size: 1.1rem;
+  line-height: 1.8;
+  color: #555;
+  position: relative;
+  z-index: 1;
 }
 
-.footer-links ul li a {
-  color: rgba(255,255,255,0.7);
-  transition: var(--transition);
-}
-
-.footer-links ul li a:hover {
-  color: var(--primary-color);
-  padding-left: 5px;
-}
-
-.footer-contact p {
-  margin-bottom: 15px;
+.testimonial-author {
   display: flex;
   align-items: center;
-  color: rgba(255,255,255,0.7);
+  gap: 1rem;
 }
 
-.footer-contact p i {
-  margin-right: 10px;
-  color: var(--primary-color);
+.author-image {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #fff;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.08);
 }
 
-.footer-bottom {
-  text-align: center;
-  padding-top: 30px;
-  border-top: 1px solid rgba(255,255,255,0.1);
+.author-info h4 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0.2rem;
+  color: #1a1a1a;
 }
 
-.footer-bottom p {
-  color: rgba(255,255,255,0.7);
+.author-info p {
+  font-size: 0.9rem;
+  color: #777;
 }
 
-/* Responsive styles */
-@media (max-width: 992px) {
-  .hero-text h1 {
-    font-size: 2.8rem;
-  }
+.testimonials-dots {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 3rem;
 }
 
-@media (max-width: 768px) {
-  .navbar {
-    height: auto;
-    padding: 15px 0;
-  }
-  
-  .nav-links {
-    position: fixed;
-    left: -100%;
-    top: 80px;
-    flex-direction: column;
-    background-color: white;
-    width: 100%;
-    text-align: center;
-    transition: var(--transition);
-    box-shadow: 0 10px 10px rgba(0,0,0,0.1);
-    padding: 20px 0;
-  }
-  
-  .nav-links.active {
-    left: 0;
-  }
-  
-  .nav-links li {
-    margin: 10px 0;
-  }
-  
-  .hamburger {
-    display: block;
-  }
-  
-  .hamburger.active .bar:nth-child(2) {
-    opacity: 0;
-  }
-  
-  .hamburger.active .bar:nth-child(1) {
-    transform: translateY(8px) rotate(45deg);
-  }
-  
-  .hamburger.active .bar:nth-child(3) {
-    transform: translateY(-8px) rotate(-45deg);
-  }
-  
-  .hero-content {
-    flex-direction: column;
-    text-align: center;
-  }
-  
-  .hero-text h1 {
-    font-size: 2.5rem;
-  }
-  
-  .hero-btns {
-    justify-content: center;
-  }
-  
-  .section-header h2 {
-    font-size: 2rem;
-  }
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ccc;
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
-@media (max-width: 576px) {
-  .hero-text h1 {
-    font-size: 2rem;
+.dot.active {
+  background: #5e72e4;
+  transform: scale(1.2);
+}`
   }
-  
-  .btn {
-    padding: 10px 20px;
-  }
-  
-  .footer-grid {
-    grid-template-columns: 1fr;
-  }
-}
-    `;
-    
-    files['js/script.js'] = `// Mobile navigation toggle
-document.addEventListener('DOMContentLoaded', function() {
-  const hamburger = document.querySelector('.hamburger');
-  const navLinks = document.querySelector('.nav-links');
-  
-  hamburger.addEventListener('click', function() {
-    hamburger.classList.toggle('active');
-    navLinks.classList.toggle('active');
-  });
-  
-  // Close navigation when clicking on a nav link
-  document.querySelectorAll('.nav-links a').forEach(link => {
-    link.addEventListener('click', function() {
-      hamburger.classList.remove('active');
-      navLinks.classList.remove('active');
-    });
-  });
-  
-  // Highlight active link based on scroll position
-  const sections = document.querySelectorAll('section');
-  const navItems = document.querySelectorAll('.nav-links a');
-  
-  window.addEventListener('scroll', function() {
-    let current = '';
-    
-    sections.forEach(section => {
-      const sectionTop = section.offsetTop;
-      const sectionHeight = section.clientHeight;
-      
-      if (pageYOffset >= (sectionTop - sectionHeight / 3)) {
-        current = section.getAttribute('id');
-      }
-    });
-    
-    navItems.forEach(item => {
-      item.classList.remove('active');
-      if (item.getAttribute('href').substring(1) === current) {
-        item.classList.add('active');
-      }
-    });
-  });
-  
-  // Smooth scrolling for anchor links
-  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-    anchor.addEventListener('click', function(e) {
-      e.preventDefault();
-      
-      const target = document.querySelector(this.getAttribute('href'));
-      
-      if (target) {
-        window.scrollTo({
-          top: target.offsetTop - 80,
-          behavior: 'smooth'
-        });
-      }
-    });
-  });
-  
-  // Simple form validation (if a form exists)
-  const contactForm = document.querySelector('#contact-form');
-  
-  if (contactForm) {
-    contactForm.addEventListener('submit', function(e) {
-      e.preventDefault();
-      
-      // Get form fields
-      const nameInput = document.querySelector('#name');
-      const emailInput = document.querySelector('#email');
-      const messageInput = document.querySelector('#message');
-      
-      // Simple validation
-      let isValid = true;
-      
-      if (nameInput.value.trim() === '') {
-        showError(nameInput, 'Name is required');
-        isValid = false;
-      } else {
-        removeError(nameInput);
-      }
-      
-      if (emailInput.value.trim() === '') {
-        showError(emailInput, 'Email is required');
-        isValid = false;
-      } else if (!isValidEmail(emailInput.value)) {
-        showError(emailInput, 'Please enter a valid email');
-        isValid = false;
-      } else {
-        removeError(emailInput);
-      }
-      
-      if (messageInput.value.trim() === '') {
-        showError(messageInput, 'Message is required');
-        isValid = false;
-      } else {
-        removeError(messageInput);
-      }
-      
-      // If form is valid, you would typically submit it
-      if (isValid) {
-        // Here you would normally submit the form
-        // For demo purposes, we'll just show a success message
-        contactForm.innerHTML = '<div class="success-message">Thank you for your message! We will get back to you soon.</div>';
-      }
-    });
-  }
-  
-  // Helper functions for form validation
-  function showError(input, message) {
-    const formControl = input.parentElement;
-    formControl.classList.add('error');
-    
-    const errorMessage = formControl.querySelector('.error-message') || document.createElement('div');
-    errorMessage.className = 'error-message';
-    errorMessage.textContent = message;
-    
-    if (!formControl.querySelector('.error-message')) {
-      formControl.appendChild(errorMessage);
-    }
-  }
-  
-  function removeError(input) {
-    const formControl = input.parentElement;
-    formControl.classList.remove('error');
-    
-    const errorMessage = formControl.querySelector('.error-message');
-    if (errorMessage) {
-      formControl.removeChild(errorMessage);
-    }
-  }
-  
-  function isValidEmail(email) {
-    const re = /^(([^<>()\\[\\]\\\\.,;:\\s@"]+(\.[^<>()\\[\\]\\\\.,;:\\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
-    return re.test(String(email).toLowerCase());
-  }
-});
-
-// Animate elements when they come into view
-const animateOnScroll = function() {
-  const elements = document.querySelectorAll('.animate');
-  
-  elements.forEach(element => {
-    const elementPosition = element.getBoundingClientRect().top;
-    const windowHeight = window.innerHeight;
-    
-    if (elementPosition < windowHeight - 50) {
-      element.classList.add('animated');
-    }
-  });
 };
 
-// Add 'animate' class to elements you want to animate
-document.addEventListener('DOMContentLoaded', function() {
-  const sections = document.querySelectorAll('section');
-  sections.forEach(section => {
-    section.classList.add('animate');
-  });
+// Get examples based on website type
+function getWebsiteExamples(websiteType: string): string {
+  // Determine which examples to include based on website type
+  let exampleStr = '';
   
-  window.addEventListener('scroll', animateOnScroll);
-  animateOnScroll(); // Initial check on page load
-});
-    `;
-    
-    // Create a simple about.html file
-    files['about.html'] = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>About Us - ${isGym ? 'FitLife Gym' : 'My Website'}</title>
-  <link rel="stylesheet" href="css/styles.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <!-- Replace problematic FontAwesome with a working CDN -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-</head>
-<body>
-  <header>
-    <nav class="navbar">
-      <div class="container">
-        <div class="logo">
-          ${isGym ? 'FitLife<span>Gym</span>' : 'My Website'}
-        </div>
-        <ul class="nav-links">
-          <li><a href="index.html">Home</a></li>
-          <li><a href="about.html" class="active">About</a></li>
-          <li><a href="#classes">Classes</a></li>
-          <li><a href="#trainers">Trainers</a></li>
-          <li><a href="#pricing">Pricing</a></li>
-          <li><a href="#contact">Contact</a></li>
-        </ul>
-        <div class="hamburger">
-          <span class="bar"></span>
-          <span class="bar"></span>
-          <span class="bar"></span>
-        </div>
-      </div>
-    </nav>
-  </header>
-
-  <section class="about-hero">
-    <div class="container">
-      <h1>About Us</h1>
-      <p>Learn more about ${isGym ? 'our fitness journey and mission' : 'our company and team'}</p>
-    </div>
-  </section>
-
-  <section class="about-content">
-    <div class="container">
-      <div class="about-grid">
-        <div class="about-text">
-          <h2>${isGym ? 'Our Story' : 'Our History'}</h2>
-          <p>${isGym ? 'Founded in 2010, FitLife Gym was created with a simple mission: to provide a fitness environment where everyone feels welcome and empowered to achieve their health goals.' : 'Our company was founded with a vision to create innovative solutions that make a difference in people\'s lives.'}</p>
-          <p>${isGym ? 'What started as a small local gym has grown into a fitness community that helps thousands of members transform their lives every day.' : 'Over the years, we\'ve grown from a small startup to an established company with a team of dedicated professionals.'}</p>
-          <h2>${isGym ? 'Our Mission' : 'Our Mission'}</h2>
-          <p>${isGym ? 'Our mission is to inspire and support individuals in their fitness journey by providing expert guidance, state-of-the-art facilities, and a motivating community.' : 'Our mission is to deliver exceptional products and services that exceed customer expectations and make a positive impact.'}</p>
-        </div>
-        <div class="about-image">
-          <img src="https://images.pexels.com/photos/3768916/pexels-photo-3768916.jpeg" alt="About Us">
-        </div>
+  exampleStr += `\n\nEXAMPLE HERO SECTION HTML:\n\`\`\`html\n${DESIGN_EXAMPLES.hero.html}\n\`\`\`\n\n`;
+  exampleStr += `EXAMPLE HERO SECTION CSS:\n\`\`\`css\n${DESIGN_EXAMPLES.hero.css}\n\`\`\`\n\n`;
+  
+  // For different website types, include additional specialized examples
+  if (websiteType.includes('ecommerce') || websiteType.includes('shop')) {
+    exampleStr += `EXAMPLE PRODUCT CARD HTML:\n\`\`\`html\n<div class="product-card">
+  <div class="product-image">
+    <img src="/*IMAGE:product*/" alt="Product Name">
+    <div class="product-badge">New</div>
+  </div>
+  <div class="product-info">
+    <h3>Premium Product</h3>
+    <div class="product-price">$199.99</div>
+    <div class="product-rating">★★★★★ <span>(42)</span></div>
+  </div>
+  <button class="add-to-cart">Add to Cart</button>
+</div>\n\`\`\`\n\n`;
+  } else if (websiteType.includes('portfolio') || websiteType.includes('creative')) {
+    exampleStr += `EXAMPLE PORTFOLIO ITEM HTML:\n\`\`\`html\n<div class="portfolio-item">
+  <div class="portfolio-image">
+    <img src="/*IMAGE:creative*/" alt="Project Title">
+    <div class="portfolio-overlay">
+      <div class="portfolio-actions">
+        <a href="#" class="view-project">View Project</a>
       </div>
     </div>
-  </section>
-
-  <footer>
-    <div class="container">
-      <div class="footer-grid">
-        <div class="footer-about">
-          <div class="logo">${isGym ? 'FitLife<span>Gym</span>' : 'My Website'}</div>
-          <p>${isGym ? 'Your premier fitness destination committed to helping you achieve your health and fitness goals.' : 'A brief description of your company or personal brand.'}</p>
-          <div class="social-links">
-            <a href="#"><i class="fab fa-facebook"></i></a>
-            <a href="#"><i class="fab fa-twitter"></i></a>
-            <a href="#"><i class="fab fa-instagram"></i></a>
-            <a href="#"><i class="fab fa-linkedin"></i></a>
-          </div>
-        </div>
-        <div class="footer-links">
-          <h3>Quick Links</h3>
-          <ul>
-            <li><a href="index.html">Home</a></li>
-            <li><a href="about.html">About</a></li>
-            <li><a href="#classes">Classes</a></li>
-            <li><a href="#pricing">Pricing</a></li>
-            <li><a href="#contact">Contact</a></li>
-          </ul>
-        </div>
-        <div class="footer-contact">
-          <h3>Contact Us</h3>
-          <p><i class="fas fa-map-marker-alt"></i> 123 Fitness Street, Gym City</p>
-          <p><i class="fas fa-phone"></i> (123) 456-7890</p>
-          <p><i class="fas fa-envelope"></i> info@fitlifegym.com</p>
-        </div>
-      </div>
-      <div class="footer-bottom">
-        <p>&copy; 2023 ${isGym ? 'FitLife Gym' : 'My Website'}. All Rights Reserved.</p>
-      </div>
-    </div>
-  </footer>
-
-  <script src="js/script.js"></script>
-</body>
-</html>
-    `;
+  </div>
+  <div class="portfolio-info">
+    <h3>Creative Project</h3>
+    <p>UI/UX Design, Development</p>
+  </div>
+</div>\n\`\`\`\n\n`;
   }
   
-  return files;
+  // Always include features and testimonials examples
+  exampleStr += `EXAMPLE FEATURES SECTION HTML:\n\`\`\`html\n${DESIGN_EXAMPLES.features.html}\n\`\`\`\n\n`;
+  exampleStr += `EXAMPLE TESTIMONIALS SECTION HTML:\n\`\`\`html\n${DESIGN_EXAMPLES.testimonials.html}\n\`\`\`\n\n`;
+  
+  return exampleStr;
+}
+
+// Universal quality standards
+const UNIVERSAL_QUALITY_STANDARDS = `
+UNIVERSAL DESIGN REQUIREMENTS:
+1. Clean Visual Hierarchy
+   - Clear distinction between primary, secondary, and tertiary elements
+   - Proper use of whitespace to create breathing room
+   - Consistent alignment and grid structure
+
+2. Professional Typography System
+   - Limited font selection (max 2 font families)
+   - Clear typographic scale for headings and body text
+   - Proper line heights and letter spacing
+
+3. Color Theory Application
+   - Well-balanced primary, secondary, and accent colors
+   - Proper contrast for accessibility (WCAG AA compliance)
+   - Strategic use of color to guide attention and create depth
+
+4. Animation & Interaction
+   - Subtle entrance animations for key elements 
+   - Meaningful hover/focus states that enhance usability
+   - Micro-interactions that provide feedback (e.g., button hover effects)
+   - Smooth transitions between states (0.2-0.5s durations)
+
+5. Image Treatment
+   - High-quality, relevant imagery (use placeholders with /*IMAGE:category*/ format)
+   - Consistent aspect ratios and image treatment
+   - Proper image optimization techniques
+
+6. Advanced CSS Techniques (must use these)
+   - CSS Variables for theme consistency
+   - Flexbox for component alignment
+   - CSS Grid for complex layouts
+   - Media queries for responsive design
+   - Subtle shadows and gradients for depth
+   - Transform/translate for animations
+`;
+
+// Domain-specific website requirements
+const DOMAIN_REQUIREMENTS: Record<string, string> = {
+  gym: `
+GYM/FITNESS WEBSITE REQUIREMENTS:
+- Bold, energetic color scheme (typically with accent colors like red, orange, or bright blue)
+- Motivational headlines and strong call-to-action buttons
+- Class schedule with real class names/descriptions
+- Trainer profiles with professional bios
+- Membership pricing tables with clear feature comparison
+- Before/after transformation galleries
+- Testimonials from members with specific results achieved
+- Equipment showcase with high-quality images
+- Contact form with membership inquiry options
+  `,
+  
+  restaurant: `
+RESTAURANT WEBSITE REQUIREMENTS:
+- Mouth-watering food photography as hero images
+- Digital menu with proper categorization and pricing
+- Online reservation system or prominent reservation call-to-action
+- Restaurant hours and location with embedded map
+- About section highlighting culinary philosophy or history
+- Chef profiles or kitchen showcase section
+- Food gallery with professional dish photography
+- Special events or catering information
+- Contact information and directions
+  `,
+  
+  tech: `
+TECHNOLOGY WEBSITE REQUIREMENTS:
+- Clean, modern interface with ample whitespace
+- Product showcase with detailed feature highlighting
+- Technical specifications presented in clean, scannable format
+- Comparison charts or tables for different models/versions
+- Interactive product demos or videos
+- Customer reviews and testimonials specific to tech products
+- Knowledge base or support section
+- Call-to-action buttons for purchase and learn more options
+- "Tech specs" sections with expandable details
+  `,
+  
+  phone: `
+SMARTPHONE/DEVICE WEBSITE REQUIREMENTS:
+- Hero section with device showcase and key selling point
+- Floating/rotating 3D device imagery or multiple device angles
+- Feature highlight sections with micro-animations
+- Technical specifications organized in a modern, clean layout
+- Color/model variant selector with visual feedback
+- Comparison table with competitor models
+- Camera/performance showcase with sample imagery
+- Battery life and charging speed visualization
+- "Buy now" and "Learn more" prominent call-to-action buttons
+- Accessory showcase section
+  `,
+};
+
+// --- MAIN GENERATION FUNCTION ---
+export async function generateProjectWithAI(prompt: string): Promise<ChatResponse> {
+  try {
+    const systemPrompt = buildDynamicSystemPrompt(prompt);
+
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error('OpenAI API key is not configured. Please set the OPENAI_API_KEY environment variable.');
+    }
+
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: prompt }
+      ],
+      temperature: 0.7,
+      max_tokens: 8000
+    });
+
+    const content = completion.choices[0]?.message.content || '';
+    if (!content) {
+      throw new Error('OpenAI returned an empty response');
+    }
+
+    // --- Robust JSON Extraction ---
+    const planMatch = content.match(/# Project Plan[\s\S]*?(?=```|$)/i);
+    const filesMatch = content.match(/```json[\s\S]*?({[\s\S]*})[\s\S]*?```/i);
+
+    const plan = planMatch ? planMatch[0].trim() : 'No plan found in AI response.';
+    let files: Record<string, string> = {};
+
+    if (filesMatch && filesMatch[1]) {
+      try {
+        files = JSON.parse(filesMatch[1]);
+      } catch (e) {
+        console.error('JSON parse error:', e);
+        throw new Error('Failed to parse JSON from AI response: ' + (e instanceof Error ? e.message : String(e)));
+      }
+    } else {
+      // Log the full AI response for debugging
+      console.error('AI response did not contain valid JSON:', content);
+      throw new Error('No valid JSON found in AI response. This could be due to incorrect formatting in the AI output.');
+    }
+
+    if (Object.keys(files).length === 0) {
+      throw new Error('AI generated an empty files object. Please try a different prompt or try again.');
+    }
+
+    return { plan, files };
+  } catch (error) {
+    if (error instanceof OpenAI.APIError) {
+      console.error('OpenAI API Error:', {
+        status: error.status,
+        message: error.message,
+        type: error.type,
+        code: error.code
+      });
+      if (error.status === 429) {
+        throw new Error('Rate limit exceeded. Please try again later.');
+      } else if (error.status === 401) {
+        throw new Error('Authentication error. Please check your API key.');
+      } else if (error.status === 500) {
+        throw new Error('OpenAI service error. Please try again later.');
+      }
+    }
+    console.error('Error in OpenAI API call:', error);
+    throw error;
+  }
+}
+
+// Helper function to detect website type from prompt
+function detectWebsiteType(prompt: string): { type: string, isPlainHtml: boolean } {
+  const promptLower = prompt.toLowerCase();
+  
+  // Check if requesting plain HTML/CSS/JS
+  const isPlainHtml = promptLower.includes('html') && 
+                      promptLower.includes('css') && 
+                      (promptLower.includes('js') || promptLower.includes('javascript')) &&
+                      !promptLower.includes('react') && 
+                      !promptLower.includes('next.js');
+  
+  // Detect website type
+  let type = 'general';
+  
+  if (promptLower.includes('gym') || promptLower.includes('fitness') || promptLower.includes('workout')) {
+    type = 'gym';
+  } else if (promptLower.includes('restaurant') || promptLower.includes('food') || promptLower.includes('cafe')) {
+    type = 'restaurant';
+  } else if (promptLower.includes('travel') || promptLower.includes('tourism') || promptLower.includes('vacation')) {
+    type = 'travel';
+  } else if (promptLower.includes('tech') || promptLower.includes('technology') || promptLower.includes('software')) {
+    type = 'tech';
+  } else if (promptLower.includes('phone') || promptLower.includes('smartphone') || promptLower.includes('mobile device')) {
+    type = 'phone';
+  } else if (promptLower.includes('fashion') || promptLower.includes('clothing') || promptLower.includes('apparel')) {
+    type = 'fashion';
+  } else if (promptLower.includes('portfolio') || promptLower.includes('creative') || promptLower.includes('designer')) {
+    type = 'portfolio';
+  } else if (promptLower.includes('real estate') || promptLower.includes('property') || promptLower.includes('home')) {
+    type = 'realestate';
+  } else if (promptLower.includes('education') || promptLower.includes('course') || promptLower.includes('school')) {
+    type = 'education';
+  }
+  
+  return { type, isPlainHtml };
+}
+
+// Build dynamic system prompt based on context
+function buildDynamicSystemPrompt(prompt: string): string {
+  return `
+You are a world-class frontend engineer and designer. 
+You generate complete, production-quality websites from a user's prompt, using only the highest standards of modern web design (Apple/Google-level).
+
+Requirements:
+- Use advanced, modern HTML5, CSS3 (with variables, grid, flexbox, animations, transitions, glassmorphism, etc.), and JavaScript or React/Tailwind if requested.
+- All content must be realistic, domain-appropriate, and high-converting. No Lorem Ipsum.
+- All images must use the /*IMAGE:category*/ placeholder format.
+- The design must be visually stunning, responsive, and interactive.
+- Use only a single, explicit JSON block for the file structure and contents.
+
+Output format (MANDATORY):
+# Project Plan
+<short, high-level plan>
+\`\`\`json
+{
+  "index.html": "<full HTML here>",
+  "css/styles.css": "<full CSS here>",
+  "js/script.js": "<full JS here>"
+}
+\`\`\`
+
+EXAMPLE OUTPUT:
+# Project Plan
+A modern, visually stunning landing page for a new smartphone, featuring a hero section, features, and testimonials. Uses glassmorphism, gradients, and smooth animations.
+\`\`\`json
+{
+  "index.html": "<!DOCTYPE html>...<body>...<img src=/*IMAGE:hero*/>...</body></html>",
+  "css/styles.css": ":root { --primary: #111; } body { ... animation ... glassmorphism ... }",
+  "js/script.js": "// Smooth scroll, reveal animations, etc."
+}
+\`\`\`
+
+Do not include any other code blocks or explanations. Only output the plan and the JSON block.
+`;
 } 
