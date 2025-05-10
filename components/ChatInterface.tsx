@@ -62,18 +62,6 @@ export default function ChatInterface({
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiPlan, setAiPlan] = useState("");
   const [loading, setLoading] = useState(false);
-  const [thinkingSteps, setThinkingSteps] = useState<string[]>([
-    "Analyzing request...",
-    "Understanding what type of website is needed",
-    "Determining components required",
-    "Planning file structure",
-    "Selecting appropriate styles and images",
-    "Considering accessibility requirements",
-    "Planning responsive design approach",
-    "Deciding on color scheme",
-    "Evaluating performance optimizations",
-    "Creating component hierarchy"
-  ]);
 
   // Function to update thinking message incrementally
   const updateThinkingMessage = (newContent: string) => {
@@ -92,7 +80,7 @@ export default function ChatInterface({
     const initialThinking: Message = { 
       role: "thinking", 
       content: "# AI Thinking Process\n\nStarting analysis...", 
-      isCollapsed: false
+      isCollapsed: true // Start collapsed
     };
     setMessages(prev => [...prev, initialThinking]);
     
