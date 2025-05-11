@@ -16,7 +16,7 @@ export default function LivePreview({ generatedCode, projectFiles = {} }: LivePr
     if (projectFiles['index.html']) {
       return projectFiles['index.html'];
     }
-    
+
     // Otherwise, use the generated code if it looks like HTML
     if (generatedCode && (generatedCode.includes('<!DOCTYPE html>') || generatedCode.includes('<html>'))) {
       return generatedCode;
@@ -52,7 +52,7 @@ export default function LivePreview({ generatedCode, projectFiles = {} }: LivePr
 
     // Clear existing content
     document.open();
-    
+  
     // Write the main HTML to the iframe
     document.write(mainHtml);
     
@@ -75,8 +75,8 @@ export default function LivePreview({ generatedCode, projectFiles = {} }: LivePr
             status: 200,
             headers: {
               'Content-Type': urlString.endsWith('.css') ? 'text/css' : 
-                              urlString.endsWith('.js') ? 'application/javascript' :
-                              'text/plain'
+                            urlString.endsWith('.js') ? 'application/javascript' :
+                            'text/plain'
             }
           }));
         }
@@ -84,7 +84,7 @@ export default function LivePreview({ generatedCode, projectFiles = {} }: LivePr
         // Otherwise, use the original fetch
         return originalFetch.call(this, url, options);
       };
-      
+  
       // Inject CSS files directly
       Object.entries(projectFiles).forEach(([path, content]) => {
         if (path.endsWith('.css') && !mainHtml.includes(path)) {

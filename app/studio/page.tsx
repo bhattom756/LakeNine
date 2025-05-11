@@ -12,6 +12,13 @@ import FileViewerDialog from '@/components/FileViewerDialog';
 type FileStructure = string[];
 type TestResultsType = string[];
 
+// Create a simple chat icon component instead of using heroicons
+const ChatIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+  </svg>
+);
+
 export default function StudioPage() {
   const [prompt, setPrompt] = useState<string>('');
   const [fileStructure, setFileStructure] = useState<FileStructure>([]);
@@ -168,20 +175,7 @@ export default function StudioPage() {
         onClick={handleChatOpen}
         className="fixed bottom-4 right-4 p-3 bg-[#1e3a8a] text-white rounded-full hover:bg-[#1e40af] transition-colors duration-200 shadow-lg"
       >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          className="h-6 w-6"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
-          />
-        </svg>
+        <ChatIcon />
       </button>
 
       {/* Chat Interface */}

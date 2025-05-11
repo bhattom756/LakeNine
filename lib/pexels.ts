@@ -4,7 +4,7 @@ const PEXELS_API_KEY = process.env.NEXT_PUBLIC_PEXELS_API_KEY;
 const PEXELS_API_URL = 'https://api.pexels.com/v1/search';
 
 // Expanded list of fallback placeholder images by category
-const FALLBACK_IMAGES: Record<string, string[]> = {
+export const FALLBACK_IMAGES: Record<string, string[]> = {
   default: [
     'https://images.pexels.com/photos/196644/pexels-photo-196644.jpeg',
     'https://images.pexels.com/photos/346529/pexels-photo-346529.jpeg',
@@ -123,83 +123,23 @@ const CATEGORY_MAPPING: Record<string, string> = {
   'workout': 'gym',
 };
 
-export async function fetchPexelsImages(query: string, perPage: number = 3): Promise<string[]> {
+// Fetch images from Pexels
+export async function fetchPexelsImages(query: string, perPage: number = 1) {
   try {
-    // Normalize query and map to proper category if needed
-    const normalizedQuery = query.toLowerCase().trim();
-    const mappedCategory = CATEGORY_MAPPING[normalizedQuery] || normalizedQuery;
-    
-    // Check if we have fallback images for this exact category
-    if (!PEXELS_API_KEY || FALLBACK_IMAGES[mappedCategory]?.length > 0) {
-      if (!PEXELS_API_KEY) {
-        console.warn('Pexels API key is not set, using fallback images');
-      }
-      
-      // Return the fallback images for this category if available
-      if (FALLBACK_IMAGES[mappedCategory]) {
-        return FALLBACK_IMAGES[mappedCategory];
-      }
-      
-      // Try to find fallback images for a similar category
-      const fallbackCategory = Object.keys(FALLBACK_IMAGES).find(key => 
-        normalizedQuery.includes(key) || key.includes(normalizedQuery)
-      );
-      
-      if (fallbackCategory) {
-        return FALLBACK_IMAGES[fallbackCategory];
-      }
-      
-      // Default fallback
-      return FALLBACK_IMAGES.default;
-    }
-    
-    // Make the API request if key is available
-    const response = await axios.get(PEXELS_API_URL, {
+    const response = await axios.get('https://api.pexels.com/v1/search', {
       headers: {
         Authorization: PEXELS_API_KEY,
       },
       params: {
-        query: mappedCategory, // Use mapped category for better search results
+        query,
         per_page: perPage,
-        orientation: mappedCategory === 'hero' || mappedCategory === 'banner' ? 'landscape' : 'square',
       },
-      timeout: 5000, // Add timeout to prevent hanging requests
     });
-    
-    // Check if photos array exists and is not empty
-    if (response.data && 
-        response.data.photos && 
-        Array.isArray(response.data.photos) && 
-        response.data.photos.length > 0) {
-      // Get medium or large size based on category
-      const sizeKey = ['hero', 'banner'].includes(mappedCategory) ? 'large' : 'medium';
-      return response.data.photos.map((photo: any) => photo.src[sizeKey]);
-    }
-    
-    throw new Error('No photos returned from Pexels API');
+
+    return response.data.photos.map((photo: any) => photo.src.medium);
   } catch (error) {
-    console.error('Error fetching Pexels images:', error);
-    
-    // Try to find the most relevant fallback category
-    const normalizedQuery = query.toLowerCase().trim();
-    const mappedCategory = CATEGORY_MAPPING[normalizedQuery] || normalizedQuery;
-    
-    // Return fallback images if we have them for this category
-    if (FALLBACK_IMAGES[mappedCategory]) {
-      return FALLBACK_IMAGES[mappedCategory];
-    }
-    
-    // Try to find a similar category
-    const fallbackCategory = Object.keys(FALLBACK_IMAGES).find(key => 
-      normalizedQuery.includes(key) || key.includes(normalizedQuery)
-    );
-    
-    if (fallbackCategory) {
-      return FALLBACK_IMAGES[fallbackCategory];
-    }
-    
-    // Default fallback
-    return FALLBACK_IMAGES.default;
+    console.error('Error fetching images from Pexels:', error);
+    return [];
   }
 }
 

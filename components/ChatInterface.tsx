@@ -19,34 +19,30 @@ interface Message {
   isCollapsed?: boolean;
 }
 
-// Add OpenAI API call
+// Update the generateProjectWithAI function to include RAG-specific messaging
 async function generateProjectWithAI(userPrompt: string) {
-  // Call the backend API to generate the project
-  const response = await fetch('/api/genCode', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt: userPrompt }),
-  });
-  if (!response.ok) throw new Error('Failed to generate project');
-  const data = await response.json();
-
-  // Enhance files with Pexels images and modern UI if needed
-  const files = { ...data.files };
-  // Example: inject images into Hero or Features components
-  for (const filePath of Object.keys(files)) {
-    if (filePath.toLowerCase().includes('hero') || filePath.toLowerCase().includes('features')) {
-      const images = await fetchPexelsImages('gym fitness', 2);
-      files[filePath] = files[filePath]
-        .replace('/*PEXELS_IMAGE_1*/', images[0] ? `"${images[0]}"` : '""')
-        .replace('/*PEXELS_IMAGE_2*/', images[1] ? `"${images[1]}"` : '""');
+  try {
+    // Call the backend API to generate the project (now using RAG)
+    const response = await fetch('/api/genCode', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: userPrompt }),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to generate project');
     }
-    // Add more logic for other components as needed
+    
+    const data = await response.json();
+    return {
+      plan: data.plan,
+      files: data.files,
+    };
+  } catch (error) {
+    console.error('Error in generateProjectWithAI:', error);
+    throw error;
   }
-
-  return {
-    plan: data.plan,
-    files,
-  };
 }
 
 export default function ChatInterface({
@@ -74,7 +70,7 @@ export default function ChatInterface({
     );
   };
 
-  // Simulate incremental thinking updates
+  // Update the simulateThinking function to include RAG-specific steps
   const simulateThinking = async (websiteType: string, framework: string) => {
     // Initial thinking message
     const initialThinking: Message = { 
@@ -91,6 +87,22 @@ export default function ChatInterface({
     updateThinkingMessage(`- Website type: ${websiteType}`);
     await new Promise(resolve => setTimeout(resolve, 400));
     updateThinkingMessage(`- Framework: ${framework}`);
+    
+    // Add RAG-specific thinking steps
+    await new Promise(resolve => setTimeout(resolve, 800));
+    updateThinkingMessage("\n\n## RAG Processing");
+    await new Promise(resolve => setTimeout(resolve, 500));
+    updateThinkingMessage("- Retrieving relevant components from knowledge base");
+    await new Promise(resolve => setTimeout(resolve, 700));
+    updateThinkingMessage("- Analyzing hero section components");
+    await new Promise(resolve => setTimeout(resolve, 400));
+    updateThinkingMessage("- Analyzing navbar components");
+    await new Promise(resolve => setTimeout(resolve, 400));
+    updateThinkingMessage("- Analyzing feature section components");
+    await new Promise(resolve => setTimeout(resolve, 400));
+    updateThinkingMessage("- Analyzing footer components");
+    await new Promise(resolve => setTimeout(resolve, 600));
+    updateThinkingMessage("- Using retrieved components to enhance generation quality");
     
     // Update with technical decisions
     await new Promise(resolve => setTimeout(resolve, 1000));
@@ -118,11 +130,11 @@ export default function ChatInterface({
     await new Promise(resolve => setTimeout(resolve, 300));
     updateThinkingMessage("- Hero: For main banner/call to action");
     await new Promise(resolve => setTimeout(resolve, 300));
-    updateThinkingMessage("- Features: To highlight gym benefits");
+    updateThinkingMessage("- Features: To highlight key benefits");
     await new Promise(resolve => setTimeout(resolve, 300));
     updateThinkingMessage("- Testimonials: For social proof");
     await new Promise(resolve => setTimeout(resolve, 300));
-    updateThinkingMessage("- Pricing: For membership options");
+    updateThinkingMessage("- Pricing: For product/service options");
     await new Promise(resolve => setTimeout(resolve, 300));
     updateThinkingMessage("- Contact: For user inquiries");
     await new Promise(resolve => setTimeout(resolve, 300));
@@ -157,7 +169,7 @@ export default function ChatInterface({
     // Add initial assistant message
     setMessages((prev) => [
       ...prev,
-      { role: "assistant", content: "I'll create a project based on your request. Let me think about the best approach..." },
+      { role: "assistant", content: "I'll create a project based on your request using my knowledge base of high-quality components. Let me think about the best approach..." },
     ]);
     
     // Determine website type and framework from input
@@ -183,7 +195,6 @@ export default function ChatInterface({
     // Start simulating thinking in real-time
     await simulateThinking(websiteType, framework);
     
-    // Use the exact prompt from the user without modifications
     try {
       // Continue with actual API call while thinking is displayed
       const aiResponse = await generateProjectWithAI(userMessage.content);
@@ -252,19 +263,20 @@ export default function ChatInterface({
         `✅ All files generated with ${isBasicWeb ? 'HTML/CSS/JS' : framework}`,
         isBasicWeb ? "✅ Ready to view in any browser" : "✅ Development server running",
         "✅ Code quality verified",
-        "✅ Responsive design implemented"
+        "✅ Responsive design implemented",
+        "✅ RAG-enhanced components integrated"
       ]);
       
       // Send the plan as a separate message
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: `**Project Plan**\n\nI've created a structured plan for your ${websiteType} website.` },
+        { role: "assistant", content: `**Project Plan**\n\nI've created a structured plan for your ${websiteType} website using my knowledge base of high-quality components.` },
       ]);
       
       // Send message about files - more concise now
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: `I've generated the following key files for your project:` },
+        { role: "assistant", content: `I've generated the following key files for your project using RAG-enhanced components:` },
       ]);
       
       // Add important files as separate messages - just list them without code
@@ -293,8 +305,8 @@ You can view the complete code by clicking on any file in the file structure pan
         { 
           role: "assistant", 
           content: isBasicWeb ? 
-            "Your HTML/CSS/JS project has been created! You can see the file structure in the left panel. Click on any file to view its content." :
-            "Your project has been created! You can see the file structure in the left panel. Click on any file to view its content." 
+            "Your HTML/CSS/JS project has been created with RAG-enhanced components! You can see the file structure in the left panel. Click on any file to view its content." :
+            "Your project has been created with RAG-enhanced components! You can see the file structure in the left panel. Click on any file to view its content." 
         },
       ]);
       

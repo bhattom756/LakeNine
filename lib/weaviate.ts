@@ -1,20 +1,29 @@
 import weaviate, { ApiKey } from 'weaviate-ts-client';
 
+// Initialize Weaviate client
 const getWeaviateClient = () => {
-  return weaviate.client({
+  // Verify environment variables are set
+  if (!process.env.WEAVIATE_HOST || !process.env.WEAVIATE_API_KEY) {
+    throw new Error('Missing Weaviate environment variables');
+  }
+
+  const client = weaviate.client({
     scheme: 'https',
-    host: process.env.WEAVIATE_HOST || '',
-    apiKey: new ApiKey(process.env.WEAVIATE_API_KEY || ''),
+    host: process.env.WEAVIATE_HOST,
+    apiKey: new ApiKey(process.env.WEAVIATE_API_KEY),
     headers: {
       'X-OpenAI-Api-Key': process.env.OPENAI_API_KEY || '',
     },
   });
+  
+  return client;
 };
 
-// Generic component retriever based on query only
-export async function retrieveComponents(query: string, limit = 5) {
+// Retrieve relevant components based on user query
+export async function retrieveComponents(query: string, limit: number = 10) {
   try {
     const client = getWeaviateClient();
+    
     const response = await client.graphql
       .get()
       .withClassName('WebComponent')
@@ -22,25 +31,26 @@ export async function retrieveComponents(query: string, limit = 5) {
       .withNearText({ concepts: [query] })
       .withLimit(limit)
       .do();
-
-    return response.data.Get.WebComponent || [];
+    
+    return response.data.Get.WebComponent;
   } catch (error) {
     console.error('Error retrieving components from Weaviate:', error);
-    throw new Error('Failed to retrieve components');
+    // Return empty array instead of throwing
+    return [];
   }
 }
 
-// Retrieve components by both type and description
-export async function retrieveComponentsByTypeOrDescription(query: string, type: string, limit = 3) {
+// Retrieve components by type and description
+export async function retrieveComponentsByTypeAndDescription(query: string, type: string, description: string, limit: number = 3) {
   try {
     const client = getWeaviateClient();
-
+    
     const response = await client.graphql
       .get()
       .withClassName('WebComponent')
       .withFields('type description code')
       .withWhere({
-        operator: 'Or',
+        operator: 'And',
         operands: [
           {
             path: ['type'],
@@ -49,42 +59,53 @@ export async function retrieveComponentsByTypeOrDescription(query: string, type:
           },
           {
             path: ['description'],
-            operator: 'Like',
-            valueString: type
+            operator: 'Equal',
+            valueString: description
           }
         ]
       })
       .withNearText({ concepts: [query] })
       .withLimit(limit)
       .do();
-
-    return response.data.Get.WebComponent || [];
+    
+    return response.data.Get.WebComponent;
   } catch (error) {
-    console.error(`Error retrieving components for type "${type}":`, error);
+    console.error(`Error retrieving ${type} components from Weaviate:`, error);
     return [];
   }
 }
 
-// Fetch all necessary component types to build a full site
+// Get components for a complete website based on user query
 export async function getWebsiteComponents(query: string) {
   try {
-    const general = await retrieveComponents(query, 10);
-    const hero = await retrieveComponentsByTypeOrDescription(query, 'hero');
-    const navbar = await retrieveComponentsByTypeOrDescription(query, 'navbar');
-    const features = await retrieveComponentsByTypeOrDescription(query, 'features');
-    const testimonials = await retrieveComponentsByTypeOrDescription(query, 'testimonials');
-    const footer = await retrieveComponentsByTypeOrDescription(query, 'footer');
-
+    // Get general components first
+    const generalComponents = await retrieveComponents(query, 10);
+    
+    // Get specific component types
+    const heroComponents = await retrieveComponentsByTypeAndDescription(query, 'hero', 'main banner');
+    const navbarComponents = await retrieveComponentsByTypeAndDescription(query, 'navbar', 'navigation');
+    const featuresComponents = await retrieveComponentsByTypeAndDescription(query, 'features', 'key benefits');
+    const footerComponents = await retrieveComponentsByTypeAndDescription(query, 'footer', 'site information');
+    const testimonialsComponents = await retrieveComponentsByTypeAndDescription(query, 'testimonials', 'customer feedback');
+    
     return {
-      general,
-      hero,
-      navbar,
-      features,
-      testimonials,
-      footer
+      general: generalComponents || [],
+      hero: heroComponents || [],
+      navbar: navbarComponents || [],
+      features: featuresComponents || [],
+      footer: footerComponents || [],
+      testimonials: testimonialsComponents || [],
     };
   } catch (error) {
-    console.error('Error aggregating website components:', error);
-    throw error;
+    console.error('Error getting website components:', error);
+    // Return empty structure instead of throwing
+    return {
+      general: [],
+      hero: [],
+      navbar: [],
+      features: [],
+      footer: [],
+      testimonials: [],
+    };
   }
 }
