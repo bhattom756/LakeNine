@@ -47,6 +47,19 @@ export default function Home() {
             >
               <Link href="/studio">Try Now</Link>
             </Button>
+            
+            <Button
+              asChild
+              variant="outline"
+              className={clsx(
+                "border-green-400 text-green-400",
+                "hover:bg-green-800 hover:text-white",
+                "px-6 py-2 rounded-full",
+                "text-sm md:text-base transition"
+              )}
+            >
+              <Link href="/webcontainer-demo">WebContainer Demo</Link>
+            </Button>
           </div>
 
           <Image

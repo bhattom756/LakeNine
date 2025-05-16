@@ -8,6 +8,9 @@ import Navbar from '@/components/ui/Navbar';
 import { ResizableLayout } from '@/components/ui/ResizableLayout';
 import ChatInterface from '@/components/ChatInterface';
 import FileViewerDialog from '@/components/FileViewerDialog';
+import { initWebContainerAuth } from '@/lib/webcontainer';
+
+// Remove auth initialization here
 
 type FileStructure = string[];
 type TestResultsType = string[];
@@ -32,6 +35,12 @@ export default function StudioPage() {
   
   // Separate state for tracking if files have been initialized
   const [filesInitialized, setFilesInitialized] = useState(false);
+
+  // Initialize WebContainer auth in useEffect
+  useEffect(() => {
+    // Initialize WebContainer auth here, in client-side only
+    initWebContainerAuth();
+  }, []);
 
   // Use useCallback for the file click handler
   const handleFileClick = useCallback((filePath: string) => {
@@ -88,8 +97,11 @@ export default function StudioPage() {
           className="bg-[#1a1a1a] border-r border-gray-800 flex flex-col overflow-hidden"
           style={{ width: `${leftWidth}%` }}
         >
-          <div className="px-4 py-3 border-b border-gray-800">
+          <div className="px-4 py-3 border-b border-gray-800 flex justify-between items-center">
             <h2 className="text-lg font-semibold text-gray-300">File Structure</h2>
+            <div className="text-xs bg-blue-600 px-2 py-1 rounded text-white">
+              WebContainer Enabled
+            </div>
           </div>
           <div className="flex-1 overflow-auto p-4">
             <FileTree 

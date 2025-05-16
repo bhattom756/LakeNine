@@ -1,7 +1,181 @@
-import axios from 'axios';
+import { createClient, ErrorResponse, Photo, PhotosWithTotalResults } from 'pexels';
 
-const PEXELS_API_KEY = process.env.NEXT_PUBLIC_PEXELS_API_KEY;
-const PEXELS_API_URL = 'https://api.pexels.com/v1/search';
+// Initialize Pexels client with fallback
+const apiKey = process.env.NEXT_PUBLIC_PEXELS_API_KEY;
+const pexelsClient = apiKey ? createClient(apiKey) : null;
+
+if (!apiKey) {
+  console.warn('Warning: NEXT_PUBLIC_PEXELS_API_KEY is not set. Using fallback images only.');
+}
+
+// Map common image categories to more specific search terms
+const categoryMappings: Record<string, string> = {
+  // General categories
+  'hero': 'modern professional business',
+  'product': 'premium product display',
+  'person': 'professional business person',
+  'creative': 'creative design workspace',
+  'portrait': 'professional headshot portrait',
+  'team': 'diverse professional team meeting',
+  
+  // Business categories
+  'business': 'modern business office professional',
+  'business_woman': 'professional business woman leader',
+  'business_man': 'professional business man executive', 
+  'meeting': 'professional business meeting conference',
+  'startup': 'modern tech startup office',
+  'office': 'modern professional workspace',
+  
+  // Technology categories
+  'tech': 'modern technology device high quality',
+  'device': 'premium tech device',
+  'laptop': 'premium laptop computer desk',
+  'smartphone': 'modern smartphone device',
+  'coding': 'programming code on screen developer',
+  
+  // Fitness and Wellness
+  'fitness': 'modern fitness training gym',
+  'gym': 'luxury fitness gym equipment',
+  'gym_equipment': 'premium fitness equipment gym',
+  'workout': 'professional fitness workout training',
+  'yoga': 'yoga wellness meditation class',
+  'fitness_trainer': 'professional fitness trainer coach',
+  
+  // Food and Restaurant
+  'food': 'gourmet food dish professional',
+  'restaurant': 'upscale restaurant interior',
+  'restaurant_dish': 'gourmet restaurant dish plated',
+  'cafe': 'modern stylish cafe',
+  'coffee': 'premium coffee cup artisan',
+  'chef': 'professional chef cooking restaurant',
+  
+  // Fashion and Beauty
+  'fashion': 'high fashion premium clothing',
+  'clothing': 'premium fashion clothing apparel',
+  'beauty': 'luxury beauty products cosmetics',
+  'model': 'professional fashion model',
+  
+  // Real Estate and Interior
+  'interior': 'luxury modern interior design',
+  'luxury_interior': 'premium luxury home interior',
+  'home': 'modern luxury home interior',
+  'real_estate': 'luxury real estate property',
+  'architecture': 'modern luxury architecture',
+  
+  // E-commerce
+  'shop': 'modern retail store interior',
+  'product_display': 'premium product photography display',
+  'shopping': 'modern shopping experience retail',
+  
+  // Education
+  'education': 'modern education classroom',
+  'student': 'diverse students learning education',
+  'classroom': 'modern educational classroom',
+  'teacher': 'professional teacher education classroom',
+  
+  // Default fallbacks by industry
+  'healthcare': 'modern healthcare medical professional',
+  'travel': 'scenic luxury travel destination',
+  'nature': 'stunning landscape nature scenery',
+  'city': 'modern urban city skyline',
+  'transportation': 'modern transportation vehicle',
+};
+
+// Fetch relevant images based on category
+export async function fetchPexelsImages(category: string, count: number = 1): Promise<string[]> {
+  try {
+    // Normalize category - remove special chars, lowercase, trim
+    const normalizedCategory = category.toLowerCase().trim().replace(/[^a-z0-9_]/g, '');
+    
+    // If no client is available, return fallback images
+    if (!pexelsClient) {
+      const fallbackCategory = CATEGORY_MAPPING[normalizedCategory] || normalizedCategory;
+      const fallbackImages = FALLBACK_IMAGES[fallbackCategory] || FALLBACK_IMAGES.default;
+      return [fallbackImages[0] || `https://via.placeholder.com/1200x800?text=${normalizedCategory}`];
+    }
+    
+    // Get enhanced search term from mapping or use the original category
+    const searchTerm = categoryMappings[normalizedCategory] || 
+                       categoryMappings[normalizedCategory.replace(/_.*$/, '')] || // Try base category
+                       `${normalizedCategory.replace(/_/g, ' ')} high quality`; // Default to category with spaces
+                       
+    // Set options for higher quality images
+    const options = {
+      per_page: count * 3, // Get more to choose from
+      query: searchTerm,
+      orientation: 'landscape',
+      size: 'large', // Prefer larger images
+      locale: 'en-US'
+    };
+    
+    // Execute query
+    const response = await pexelsClient.photos.search(options) as PhotosWithTotalResults;
+    
+    // Sort by size and quality (larger and better quality first)
+    const sortedPhotos = response.photos.sort((a, b) => {
+      // Prioritize by resolution
+      const aResolution = a.width * a.height;
+      const bResolution = b.width * b.height;
+      
+      // If similar resolution, prioritize newer photos
+      if (Math.abs(aResolution - bResolution) < 200000) {
+        return (b.id || 0) - (a.id || 0); // Newer photos have higher IDs
+      }
+      
+      return bResolution - aResolution;
+    });
+    
+    // Get URLs of top photos up to requested count
+    const imageUrls = sortedPhotos.slice(0, count).map(photo => photo.src.large);
+    
+    // If no images found, return placeholder
+    if (imageUrls.length === 0) {
+      return [`https://via.placeholder.com/1200x800?text=${normalizedCategory}`];
+    }
+    
+    return imageUrls;
+  } catch (error) {
+    console.error(`Error fetching images for ${category}:`, error);
+    // Return a fallback image on error
+    const fallbackCategory = CATEGORY_MAPPING[category] || category;
+    const fallbackImages = FALLBACK_IMAGES[fallbackCategory] || FALLBACK_IMAGES.default;
+    return [fallbackImages[0] || `https://via.placeholder.com/1200x800?text=${category}`];
+  }
+}
+
+// Process code string to extract and replace image placeholders
+export async function processImagesInCode(code: string): Promise<string> {
+  if (!code) return '';
+  
+  try {
+    const regex = /\/\*IMAGE:([a-zA-Z0-9_-]+)\*\//g;
+    let match;
+    let processedCode = code;
+    const categories = new Set<string>();
+    
+    // First, collect all unique categories to batch process them
+    while ((match = regex.exec(code)) !== null) {
+      categories.add(match[1]);
+    }
+    
+    // Fetch all images at once
+    const categoryImages: Record<string, string[]> = {};
+    for (const category of categories) {
+      categoryImages[category] = await fetchPexelsImages(category, 1);
+    }
+    
+    // Replace all placeholders with actual image URLs
+    for (const [category, images] of Object.entries(categoryImages)) {
+      const categoryRegex = new RegExp(`\\/\\*IMAGE:${category}\\*\\/`, 'g');
+      processedCode = processedCode.replace(categoryRegex, images[0]);
+    }
+    
+    return processedCode;
+  } catch (error) {
+    console.error('Error processing images in code:', error);
+    return code; // Return original code if processing fails
+  }
+}
 
 // Expanded list of fallback placeholder images by category
 export const FALLBACK_IMAGES: Record<string, string[]> = {
@@ -98,97 +272,21 @@ export const FALLBACK_IMAGES: Record<string, string[]> = {
 // Category mapping for alternative keywords
 const CATEGORY_MAPPING: Record<string, string> = {
   'headshot': 'portrait',
-  'person': 'portrait',
   'profile': 'portrait',
   'header': 'hero',
   'cover': 'banner',
   'item': 'product',
   'merchandise': 'product',
   'gadget': 'tech',
-  'device': 'phone',
   'mobile': 'phone',
   'clothing': 'fashion',
   'apparel': 'fashion',
   'house': 'realestate',
   'property': 'realestate',
-  'home': 'realestate',
   'school': 'education',
   'learning': 'education',
   'course': 'education',
   'dishes': 'food',
   'meal': 'food',
   'cuisine': 'food',
-  'cafe': 'restaurant',
-  'fitness': 'gym',
-  'workout': 'gym',
-};
-
-// Fetch images from Pexels
-export async function fetchPexelsImages(query: string, perPage: number = 1) {
-  try {
-    const response = await axios.get('https://api.pexels.com/v1/search', {
-      headers: {
-        Authorization: PEXELS_API_KEY,
-      },
-      params: {
-        query,
-        per_page: perPage,
-      },
-    });
-
-    return response.data.photos.map((photo: any) => photo.src.medium);
-  } catch (error) {
-    console.error('Error fetching images from Pexels:', error);
-    return [];
-  }
-}
-
-/**
- * Processes HTML/CSS code to replace image placeholders with actual image URLs.
- * Supports the IMAGE:category placeholder format (e.g. /*IMAGE:hero*\/).
- */
-export async function processImagesInCode(code: string): Promise<string> {
-  // Regex to find and extract image placeholders
-  const regex = /\/\*IMAGE:(.*?)\*\//g;
-  let match;
-  let processedCode = code;
-  
-  // Keep track of categories we've already fetched to avoid duplicate API calls
-  const categoryCache: Record<string, string[]> = {};
-  
-  // Find all image placeholders and replace them
-  while ((match = regex.exec(code)) !== null) {
-    const placeholder = match[0]; // The full placeholder
-    const category = match[1].trim().toLowerCase(); // The category name
-    
-    let imageUrls: string[];
-    
-    // Only fetch images once per category
-    if (categoryCache[category]) {
-      imageUrls = categoryCache[category];
-    } else {
-      // Get the correct images for this category
-      imageUrls = await fetchPexelsImages(category, 3);
-      categoryCache[category] = imageUrls;
-    }
-    
-    // If we have images, replace the placeholder with a random one
-    if (imageUrls && imageUrls.length > 0) {
-      const randomIndex = Math.floor(Math.random() * imageUrls.length);
-      const imageUrl = imageUrls[randomIndex];
-      
-      // Replace all instances of this exact placeholder
-      processedCode = processedCode.replace(new RegExp(escapeRegExp(placeholder), 'g'), imageUrl);
-    }
-  }
-  
-  return processedCode;
-}
-
-// Helper function to escape special regex characters
-function escapeRegExp(string: string): string {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-// Ensure fetchPexelsImages is exported
-export { fetchPexelsImages }; 
+}; 

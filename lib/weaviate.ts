@@ -81,12 +81,23 @@ export async function getWebsiteComponents(query: string) {
     // Get general components first
     const generalComponents = await retrieveComponents(query, 10);
     
-    // Get specific component types
-    const heroComponents = await retrieveComponentsByTypeAndDescription(query, 'hero', 'main banner');
-    const navbarComponents = await retrieveComponentsByTypeAndDescription(query, 'navbar', 'navigation');
-    const featuresComponents = await retrieveComponentsByTypeAndDescription(query, 'features', 'key benefits');
+    // Get specific component types with descriptions
+    const heroComponents = await retrieveComponentsByTypeAndDescription(query, 'hero', 'main banner section');
+    const navbarComponents = await retrieveComponentsByTypeAndDescription(query, 'navbar', 'navigation menu');
+    const featuresComponents = await retrieveComponentsByTypeAndDescription(query, 'features', 'key benefits and features');
     const footerComponents = await retrieveComponentsByTypeAndDescription(query, 'footer', 'site information');
-    const testimonialsComponents = await retrieveComponentsByTypeAndDescription(query, 'testimonials', 'customer feedback');
+    const testimonialsComponents = await retrieveComponentsByTypeAndDescription(query, 'testimonials', 'customer reviews');
+    
+    // Additional component types
+    const pricingComponents = await retrieveComponentsByTypeAndDescription(query, 'pricing', 'pricing plans and tiers');
+    const ctaComponents = await retrieveComponentsByTypeAndDescription(query, 'cta', 'call to action section');
+    const statsComponents = await retrieveComponentsByTypeAndDescription(query, 'stats', 'statistics and metrics');
+    const teamComponents = await retrieveComponentsByTypeAndDescription(query, 'team', 'team members section');
+    const contactComponents = await retrieveComponentsByTypeAndDescription(query, 'contact', 'contact form and info');
+    const faqComponents = await retrieveComponentsByTypeAndDescription(query, 'faq', 'frequently asked questions');
+    const galleryComponents = await retrieveComponentsByTypeAndDescription(query, 'gallery', 'image gallery or portfolio');
+    const blogComponents = await retrieveComponentsByTypeAndDescription(query, 'blog', 'blog posts section');
+    const newsletterComponents = await retrieveComponentsByTypeAndDescription(query, 'newsletter', 'email subscription');
     
     return {
       general: generalComponents || [],
@@ -95,6 +106,15 @@ export async function getWebsiteComponents(query: string) {
       features: featuresComponents || [],
       footer: footerComponents || [],
       testimonials: testimonialsComponents || [],
+      pricing: pricingComponents || [],
+      cta: ctaComponents || [],
+      stats: statsComponents || [],
+      team: teamComponents || [],
+      contact: contactComponents || [],
+      faq: faqComponents || [],
+      gallery: galleryComponents || [],
+      blog: blogComponents || [],
+      newsletter: newsletterComponents || [],
     };
   } catch (error) {
     console.error('Error getting website components:', error);
@@ -106,6 +126,15 @@ export async function getWebsiteComponents(query: string) {
       features: [],
       footer: [],
       testimonials: [],
+      pricing: [],
+      cta: [],
+      stats: [],
+      team: [],
+      contact: [],
+      faq: [],
+      gallery: [],
+      blog: [],
+      newsletter: [],
     };
   }
 }

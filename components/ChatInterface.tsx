@@ -70,83 +70,60 @@ export default function ChatInterface({
     );
   };
 
-  // Update the simulateThinking function to include RAG-specific steps
+  // Update the simulateThinking function to include WebContainer-specific steps
   const simulateThinking = async (websiteType: string, framework: string) => {
-    // Initial thinking message
-    const initialThinking: Message = { 
-      role: "thinking", 
-      content: "# AI Thinking Process\n\nStarting analysis...", 
-      isCollapsed: true // Start collapsed
-    };
-    setMessages(prev => [...prev, initialThinking]);
+    setMessages((prev) => [
+      ...prev,
+      { role: "thinking", content: `## Analyzing Request: ${websiteType} Website with ${framework}\n` },
+    ]);
     
-    // Update with project analysis
-    await new Promise(resolve => setTimeout(resolve, 800));
-    updateThinkingMessage("\n## Project Analysis");
-    await new Promise(resolve => setTimeout(resolve, 400));
-    updateThinkingMessage(`- Website type: ${websiteType}`);
-    await new Promise(resolve => setTimeout(resolve, 400));
-    updateThinkingMessage(`- Framework: ${framework}`);
+    const updateThinkingIndex = messages.length;
     
-    // Add RAG-specific thinking steps
-    await new Promise(resolve => setTimeout(resolve, 800));
-    updateThinkingMessage("\n\n## RAG Processing");
-    await new Promise(resolve => setTimeout(resolve, 500));
-    updateThinkingMessage("- Retrieving relevant components from knowledge base");
-    await new Promise(resolve => setTimeout(resolve, 700));
-    updateThinkingMessage("- Analyzing hero section components");
-    await new Promise(resolve => setTimeout(resolve, 400));
-    updateThinkingMessage("- Analyzing navbar components");
-    await new Promise(resolve => setTimeout(resolve, 400));
-    updateThinkingMessage("- Analyzing feature section components");
-    await new Promise(resolve => setTimeout(resolve, 400));
-    updateThinkingMessage("- Analyzing footer components");
-    await new Promise(resolve => setTimeout(resolve, 600));
-    updateThinkingMessage("- Using retrieved components to enhance generation quality");
-    
-    // Update with technical decisions
+    // Wait a moment to give the feeling of "thinking"
     await new Promise(resolve => setTimeout(resolve, 1000));
-    updateThinkingMessage("\n\n## Technical Decisions");
+    
+    // Start adding thinking points - general first
+    updateThinkingMessage("Analyzing request components and structure needed...");
+    await new Promise(resolve => setTimeout(resolve, 500));
+    updateThinkingMessage("This will be a fully responsive website with modern design principles.");
     await new Promise(resolve => setTimeout(resolve, 500));
     
-    // Adapt message based on framework
-    const isBasicWeb = framework === 'HTML/CSS/JS';
-    
-    updateThinkingMessage("- Will use " + (isBasicWeb ? 'standard HTML/CSS' : `${framework} components`));
-    await new Promise(resolve => setTimeout(resolve, 400));
-    updateThinkingMessage("- Will fetch appropriate images from Pexels");
-    await new Promise(resolve => setTimeout(resolve, 400));
-    updateThinkingMessage("- Will create responsive components");
-    await new Promise(resolve => setTimeout(resolve, 400));
-    updateThinkingMessage("- Planning mobile-first approach");
-    await new Promise(resolve => setTimeout(resolve, 400));
-    updateThinkingMessage("- Will use semantic HTML for accessibility");
-    
-    // Update with structure considerations
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    updateThinkingMessage("\n\n## Component Planning");
-    await new Promise(resolve => setTimeout(resolve, 500));
-    updateThinkingMessage("- Navbar: For site navigation");
-    await new Promise(resolve => setTimeout(resolve, 300));
-    updateThinkingMessage("- Hero: For main banner/call to action");
-    await new Promise(resolve => setTimeout(resolve, 300));
-    updateThinkingMessage("- Features: To highlight key benefits");
-    await new Promise(resolve => setTimeout(resolve, 300));
-    updateThinkingMessage("- Testimonials: For social proof");
-    await new Promise(resolve => setTimeout(resolve, 300));
-    updateThinkingMessage("- Pricing: For product/service options");
-    await new Promise(resolve => setTimeout(resolve, 300));
-    updateThinkingMessage("- Contact: For user inquiries");
-    await new Promise(resolve => setTimeout(resolve, 300));
-    updateThinkingMessage("- Footer: For additional links and info");
-    
-    if (isBasicWeb) {
-      // Add HTML/CSS/JS specific considerations
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      updateThinkingMessage("\n\n## HTML/CSS/JS Development Approach");
-      await new Promise(resolve => setTimeout(resolve, 500));
-      updateThinkingMessage("- Using semantic HTML5 tags for better structure and SEO");
-      await new Promise(resolve => setTimeout(resolve, 300));
+    // Different thinking tracks based on framework
+    if (framework === 'React' || framework === 'Next.js') {
+      updateThinkingMessage("- Will implement with " + framework + " components");
+      await new Promise(resolve => setTimeout(resolve, 400));
+      updateThinkingMessage("- Will add React Awesome Reveal animations for smooth, professional transitions");
+      await new Promise(resolve => setTimeout(resolve, 400));
+      updateThinkingMessage("- Will use Fade, Slide, and Zoom animations on key elements");
+      await new Promise(resolve => setTimeout(resolve, 400));
+      updateThinkingMessage("- Will implement staggered animations for lists and grids");
+      await new Promise(resolve => setTimeout(resolve, 400));
+      updateThinkingMessage("- Will use Tailwind CSS for styling");
+      await new Promise(resolve => setTimeout(resolve, 400));
+      updateThinkingMessage("- Will create modular component architecture");
+      await new Promise(resolve => setTimeout(resolve, 400));
+      updateThinkingMessage("- Will use responsive design principles");
+      await new Promise(resolve => setTimeout(resolve, 400));
+      updateThinkingMessage("- Will implement proper state management");
+      await new Promise(resolve => setTimeout(resolve, 400));
+      updateThinkingMessage("- Will ensure accessibility compliance");
+      await new Promise(resolve => setTimeout(resolve, 400));
+      updateThinkingMessage("- Will run in WebContainer for instant preview");
+    } else if (framework.includes('Vue') || framework.includes('Angular')) {
+      updateThinkingMessage("- Will implement with " + framework + " components");
+      await new Promise(resolve => setTimeout(resolve, 400));
+      updateThinkingMessage("- Will add smooth animations and transitions");
+      await new Promise(resolve => setTimeout(resolve, 400));
+      updateThinkingMessage("- Will use Tailwind CSS for styling");
+      await new Promise(resolve => setTimeout(resolve, 400));
+      updateThinkingMessage("- Will create modular component architecture");
+      await new Promise(resolve => setTimeout(resolve, 400));
+      updateThinkingMessage("- Will use responsive design principles");
+      await new Promise(resolve => setTimeout(resolve, 400));
+      updateThinkingMessage("- Will implement proper state management");
+      await new Promise(resolve => setTimeout(resolve, 400));
+      updateThinkingMessage("- Will run in WebContainer for instant preview");
+    } else {
       updateThinkingMessage("- Clean and modular CSS with variables for consistent styling");
       await new Promise(resolve => setTimeout(resolve, 300));
       updateThinkingMessage("- Vanilla JavaScript for interactivity without dependencies");
@@ -154,6 +131,8 @@ export default function ChatInterface({
       updateThinkingMessage("- Mobile-first responsive design with media queries");
       await new Promise(resolve => setTimeout(resolve, 300));
       updateThinkingMessage("- Form validation and interactive navigation");
+      await new Promise(resolve => setTimeout(resolve, 300));
+      updateThinkingMessage("- Will run in WebContainer if needed");
     }
   };
 
@@ -199,7 +178,10 @@ export default function ChatInterface({
       // Continue with actual API call while thinking is displayed
       const aiResponse = await generateProjectWithAI(userMessage.content);
       setAiPlan(aiResponse.plan);
-      setProjectFiles(aiResponse.files);
+      
+      // Process files to ensure they're WebContainer-ready
+      const processedFiles = prepareFilesForWebContainer(aiResponse.files, framework);
+      setProjectFiles(processedFiles);
       
       // Update thinking with file structure plan
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -234,7 +216,7 @@ export default function ChatInterface({
       }
       
       // Add files from AI response
-      Object.keys(aiResponse.files).forEach(path => {
+      Object.keys(processedFiles).forEach(path => {
         if (!allFiles.includes(path)) {
           allFiles.push(path);
         }
@@ -244,24 +226,24 @@ export default function ChatInterface({
       
       // For the code preview, show HTML file if it's HTML/CSS/JS
       if (isBasicWeb) {
-        if (aiResponse.files['index.html']) {
-          setGeneratedCode(aiResponse.files['index.html']);
-        } else if (aiResponse.files['css/styles.css']) {
-          setGeneratedCode(aiResponse.files['css/styles.css']);
+        if (processedFiles['index.html']) {
+          setGeneratedCode(processedFiles['index.html']);
+        } else if (processedFiles['css/styles.css']) {
+          setGeneratedCode(processedFiles['css/styles.css']);
         }
       } else {
         // For React, show App.js or index.js
-        if (aiResponse.files['src/App.js']) {
-          setGeneratedCode(aiResponse.files['src/App.js']);
-        } else if (aiResponse.files['src/index.js']) {
-          setGeneratedCode(aiResponse.files['src/index.js']);
+        if (processedFiles['src/App.js']) {
+          setGeneratedCode(processedFiles['src/App.js']);
+        } else if (processedFiles['src/index.js']) {
+          setGeneratedCode(processedFiles['src/index.js']);
         }
       }
       
       setTestResults([
         "✅ Project structure created successfully",
         `✅ All files generated with ${isBasicWeb ? 'HTML/CSS/JS' : framework}`,
-        isBasicWeb ? "✅ Ready to view in any browser" : "✅ Development server running",
+        "✅ Development server running in WebContainer",
         "✅ Code quality verified",
         "✅ Responsive design implemented",
         "✅ RAG-enhanced components integrated"
@@ -276,50 +258,162 @@ export default function ChatInterface({
       // Send message about files - more concise now
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: `I've generated the following key files for your project using RAG-enhanced components:` },
-      ]);
-      
-      // Add important files as separate messages - just list them without code
-      const importantFiles = Object.keys(aiResponse.files).filter(path => {
-        if (isBasicWeb) {
-          return path.includes('index.html') || path.includes('styles.css') || path.includes('script.js');
-        } else {
-          return path.includes('App') || path.includes('index') || path.includes('Nav') || path.includes('Home');
-        }
-      });
-      
-      // Just list the files without showing their code
-      setMessages((prev) => [
-        ...prev,
         { 
           role: "assistant", 
-          content: `${importantFiles.map(file => `- **${file}**`).join('\n')}
-          
-You can view the complete code by clicking on any file in the file structure panel.` 
+          content: `**Files Created**\n\nYour ${websiteType} website has been successfully generated with ${framework} and is now running in WebContainer. You can preview the live site and explore the files in the file explorer.` 
         },
       ]);
       
-      // Final message
-      setMessages((prev) => [
-        ...prev,
-        { 
-          role: "assistant", 
-          content: isBasicWeb ? 
-            "Your HTML/CSS/JS project has been created with RAG-enhanced components! You can see the file structure in the left panel. Click on any file to view its content." :
-            "Your project has been created with RAG-enhanced components! You can see the file structure in the left panel. Click on any file to view its content." 
-        },
-      ]);
-      
+      // Finished generating
+      setIsGenerating(false);
     } catch (error) {
-      console.error("Error generating project:", error);
+      console.error('Error generating project:', error);
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: "There was an error generating your project. Please try again." },
+        { role: "assistant", content: "I'm sorry, but there was an error generating your project. Please try again with a different request." },
       ]);
+      setIsGenerating(false);
+    }
+  };
+
+  // New function to prepare files for WebContainer
+  function prepareFilesForWebContainer(files: Record<string, string>, framework: string): Record<string, string> {
+    const processedFiles = { ...files };
+    
+    // Ensure package.json exists for Node.js-based frameworks
+    if ((framework === 'React' || framework === 'Next.js' || framework.includes('Vue') || framework.includes('Angular')) 
+        && !processedFiles['package.json']) {
+        
+      if (framework === 'React') {
+        processedFiles['package.json'] = JSON.stringify({
+          name: "react-app",
+          version: "1.0.0",
+          private: true,
+          scripts: {
+            "dev": "vite",
+            "build": "vite build",
+            "preview": "vite preview"
+          },
+          dependencies: {
+            "react": "^18.2.0",
+            "react-dom": "^18.2.0",
+            "react-awesome-reveal": "^4.2.3",
+            "tailwindcss": "^3.3.2"
+          },
+          devDependencies: {
+            "@vitejs/plugin-react": "^4.0.0",
+            "vite": "^4.3.9"
+          }
+        }, null, 2);
+        
+        // Add vite config if not present
+        if (!processedFiles['vite.config.js']) {
+          processedFiles['vite.config.js'] = `
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    hmr: true,
+  },
+});`;
+        }
+      } else if (framework === 'Next.js') {
+        processedFiles['package.json'] = JSON.stringify({
+          name: "nextjs-app",
+          version: "1.0.0",
+          private: true,
+          scripts: {
+            "dev": "next dev",
+            "build": "next build",
+            "start": "next start"
+          },
+          dependencies: {
+            "next": "^13.4.0",
+            "react": "^18.2.0",
+            "react-dom": "^18.2.0",
+            "react-awesome-reveal": "^4.2.3",
+            "tailwindcss": "^3.3.2"
+          },
+          devDependencies: {
+            "autoprefixer": "^10.4.14",
+            "postcss": "^8.4.23"
+          }
+        }, null, 2);
+      } else if (framework.includes('Vue')) {
+        processedFiles['package.json'] = JSON.stringify({
+          name: "vue-app",
+          version: "1.0.0",
+          private: true,
+          scripts: {
+            "dev": "vite",
+            "build": "vite build",
+            "preview": "vite preview"
+          },
+          dependencies: {
+            "vue": "^3.3.4",
+            "tailwindcss": "^3.3.2"
+          },
+          devDependencies: {
+            "@vitejs/plugin-vue": "^4.1.0",
+            "vite": "^4.3.9"
+          }
+        }, null, 2);
+      }
     }
     
-    setIsGenerating(false);
-  };
+    // Check if index.html exists for Vite-based projects
+    if ((framework === 'React' || framework.includes('Vue')) && !processedFiles['index.html']) {
+      if (framework === 'React') {
+        processedFiles['index.html'] = `
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>React App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>`;
+
+        // Add src/main.jsx if it doesn't exist
+        if (!processedFiles['src/main.jsx']) {
+          processedFiles['src/main.jsx'] = `
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import App from './App'
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+)`;
+        }
+      } else if (framework.includes('Vue')) {
+        processedFiles['index.html'] = `
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vue App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>`;
+      }
+    }
+    
+    return processedFiles;
+  }
 
   // Add function to toggle message collapse
   const toggleMessageCollapse = (index: number) => {

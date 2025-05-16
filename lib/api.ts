@@ -7,389 +7,134 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const DESIGN_EXAMPLES = {
   // Hero section examples
   hero: {
-    html: `<!-- Apple-quality Hero Section -->
-<section class="hero">
-  <div class="hero-content">
-    <h1 class="hero-title">Experience the Future</h1>
-    <p class="hero-subtitle">Groundbreaking design meets unparalleled performance</p>
-    <div class="hero-cta">
-      <a href="#" class="btn btn-primary">Learn more</a>
-      <a href="#" class="btn btn-secondary">Buy now</a>
+    html: `<!-- Modern Hero Section with Tailwind CSS -->
+<section class="relative min-h-screen bg-gradient-to-r from-gray-900 to-gray-800 text-white overflow-hidden">
+  <div class="container mx-auto px-4 py-32 flex flex-col lg:flex-row items-center justify-between">
+    <div class="lg:w-1/2 space-y-8 text-center lg:text-left">
+      <h1 class="text-5xl lg:text-7xl font-bold leading-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-emerald-400">
+        Experience the Future
+      </h1>
+      <p class="text-xl lg:text-2xl text-gray-300">
+        Groundbreaking design meets unparalleled performance
+      </p>
+      <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+        <a href="#" class="px-8 py-4 bg-blue-600 hover:bg-blue-700 rounded-lg text-lg font-semibold transition-all duration-300 transform hover:scale-105">
+          Learn more
+        </a>
+        <a href="#" class="px-8 py-4 bg-transparent border-2 border-white hover:bg-white hover:text-gray-900 rounded-lg text-lg font-semibold transition-all duration-300">
+          Buy now
+        </a>
+      </div>
+    </div>
+    <div class="lg:w-1/2 mt-12 lg:mt-0 relative">
+      <div class="absolute inset-0 bg-gradient-to-tr from-blue-500/30 to-emerald-500/30 rounded-3xl filter blur-3xl"></div>
+      <img src="/*IMAGE:product*/" alt="Product showcase" class="relative w-full h-auto rounded-3xl shadow-2xl transform hover:scale-105 transition-transform duration-500">
     </div>
   </div>
-  <div class="hero-image">
-    <img src="/*IMAGE:product*/" alt="Product showcase" class="product-image">
-    <div class="hero-gradient"></div>
-  </div>
+  <div class="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-gray-900 to-transparent"></div>
 </section>`,
-    
-    css: `.hero {
-  height: 100vh;
-  display: flex;
-  align-items: center;
-  position: relative;
-  overflow: hidden;
-}
-
-.hero-content {
-  max-width: 50%;
-  padding: 0 5rem;
-  z-index: 2;
-}
-
-.hero-title {
-  font-size: clamp(2.5rem, 5vw, 4.5rem);
-  font-weight: 700;
-  line-height: 1.1;
-  margin-bottom: 1.5rem;
-  background: linear-gradient(90deg, #000, #333);
-  -webkit-background-clip: text;
-  color: transparent;
-  animation: fadeIn 0.8s ease-out forwards;
-}
-
-.hero-subtitle {
-  font-size: clamp(1rem, 2vw, 1.5rem);
-  margin-bottom: 2.5rem;
-  font-weight: 400;
-  color: #555;
-  animation: fadeIn 1s ease-out 0.3s forwards;
-  opacity: 0;
-}
-
-.hero-cta {
-  display: flex;
-  gap: 1rem;
-  animation: fadeIn 1.2s ease-out 0.5s forwards;
-  opacity: 0;
-}
-
-.hero-image {
-  position: absolute;
-  right: -5%;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 60%;
-  height: 80%;
-  animation: floatIn 1.5s ease-out forwards;
-  opacity: 0;
-}
-
-.product-image {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  filter: drop-shadow(0 20px 30px rgba(0,0,0,0.15));
-}
-
-.hero-gradient {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, rgba(255,255,255,1) 0%, rgba(255,255,255,0.8) 50%, rgba(255,255,255,0) 100%);
-  z-index: -1;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes floatIn {
-  from { opacity: 0; transform: translate(50px, -50%); }
-  to { opacity: 1; transform: translate(0, -50%); }
-}`
+    css: `/* No custom CSS needed - using Tailwind utility classes */`
   },
   
   // Feature section examples
   features: {
-    html: `<!-- Modern Feature Section -->
-<section class="features">
-  <div class="features-header">
-    <h2>Cutting-edge features</h2>
-    <p>Discover what makes our product exceptional</p>
-  </div>
-  
-  <div class="features-grid">
-    <div class="feature-card">
-      <div class="feature-icon">
-        <svg><!-- Icon SVG --></svg>
-      </div>
-      <h3>Stunning Design</h3>
-      <p>Sleek aesthetics combined with intuitive interfaces for an exceptional user experience.</p>
+    html: `<!-- Modern Features Section with Tailwind CSS -->
+<section class="py-24 bg-gray-50">
+  <div class="container mx-auto px-4">
+    <div class="text-center mb-16">
+      <h2 class="text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
+        Features that Set Us Apart
+      </h2>
+      <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+        Discover why our solution is the perfect choice for modern businesses
+      </p>
     </div>
     
-    <div class="feature-card">
-      <div class="feature-icon">
-        <svg><!-- Icon SVG --></svg>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      <!-- Feature Card 1 -->
+      <div class="group p-8 bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300">
+        <div class="w-16 h-16 bg-blue-100 rounded-lg flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+          <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <!-- Add your feature icon SVG path here -->
+          </svg>
+        </div>
+        <h3 class="text-2xl font-semibold text-gray-900 mb-4">Lightning Fast</h3>
+        <p class="text-gray-600 leading-relaxed">
+          Experience blazing fast performance with our optimized infrastructure
+        </p>
       </div>
-      <h3>Powerful Performance</h3>
-      <p>State-of-the-art technology ensuring seamless operations even under heavy workloads.</p>
-    </div>
-    
-    <div class="feature-card">
-      <div class="feature-icon">
-        <svg><!-- Icon SVG --></svg>
+      
+      <!-- Feature Card 2 -->
+      <div class="group p-8 bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300">
+        <div class="w-16 h-16 bg-emerald-100 rounded-lg flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+          <svg class="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <!-- Add your feature icon SVG path here -->
+          </svg>
+        </div>
+        <h3 class="text-2xl font-semibold text-gray-900 mb-4">Secure by Design</h3>
+        <p class="text-gray-600 leading-relaxed">
+          Built with security in mind, protecting your data at every step
+        </p>
       </div>
-      <h3>Smart Integration</h3>
-      <p>Effortlessly connects with your existing ecosystem for a unified experience.</p>
+      
+      <!-- Feature Card 3 -->
+      <div class="group p-8 bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300">
+        <div class="w-16 h-16 bg-purple-100 rounded-lg flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+          <svg class="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <!-- Add your feature icon SVG path here -->
+          </svg>
+        </div>
+        <h3 class="text-2xl font-semibold text-gray-900 mb-4">24/7 Support</h3>
+        <p class="text-gray-600 leading-relaxed">
+          Our dedicated team is here to help you succeed around the clock
+        </p>
+      </div>
     </div>
   </div>
 </section>`,
-    
-    css: `.features {
-  padding: 8rem 0;
-  background-color: #f8f9fa;
-}
-
-.features-header {
-  text-align: center;
-  max-width: 700px;
-  margin: 0 auto 5rem;
-}
-
-.features-header h2 {
-  font-size: 2.5rem;
-  font-weight: 700;
-  margin-bottom: 1rem;
-  color: #1a1a1a;
-}
-
-.features-header p {
-  font-size: 1.2rem;
-  color: #555;
-}
-
-.features-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 2.5rem;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 2rem;
-}
-
-.feature-card {
-  background: white;
-  border-radius: 12px;
-  padding: 2.5rem;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.05);
-  transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
-}
-
-.feature-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 5px;
-  height: 0;
-  background: linear-gradient(45deg, #5e72e4, #8392ff);
-  transition: height 0.5s ease;
-}
-
-.feature-card:hover {
-  transform: translateY(-10px);
-  box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-}
-
-.feature-card:hover::before {
-  height: 100%;
-}
-
-.feature-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 70px;
-  height: 70px;
-  background: rgba(94, 114, 228, 0.1);
-  border-radius: 50%;
-  margin-bottom: 1.5rem;
-}
-
-.feature-card h3 {
-  font-size: 1.5rem;
-  font-weight: 600;
-  margin-bottom: 1rem;
-  color: #1a1a1a;
-}
-
-.feature-card p {
-  color: #555;
-  line-height: 1.6;
-}`
+    css: `/* No custom CSS needed - using Tailwind utility classes */`
   },
   
   // Testimonials section example  
   testimonials: {
-    html: `<!-- Modern Testimonials Section -->
-<section class="testimonials">
-  <div class="testimonials-header">
-    <h2>What our customers say</h2>
-    <p>Join thousands of satisfied users worldwide</p>
-  </div>
-  
-  <div class="testimonials-slider">
-    <div class="testimonial-card">
-      <div class="testimonial-content">
-        <div class="quote-icon">"</div>
-        <p>This product has completely transformed how we operate. The intuitive interface and powerful features have increased our productivity by 200%.</p>
-      </div>
-      <div class="testimonial-author">
-        <img src="/*IMAGE:portrait*/" alt="Sarah Johnson" class="author-image">
-        <div class="author-info">
-          <h4>Sarah Johnson</h4>
-          <p>CEO, TechInnovate</p>
-        </div>
-      </div>
+    html: `<!-- Modern Testimonials Section with Tailwind CSS -->
+<section class="py-24 bg-gray-900 text-white">
+  <div class="container mx-auto px-4">
+    <div class="text-center mb-16">
+      <h2 class="text-4xl lg:text-5xl font-bold mb-4">
+        What Our Clients Say
+      </h2>
+      <p class="text-xl text-gray-400 max-w-3xl mx-auto">
+        Don't just take our word for it - hear from our satisfied customers
+      </p>
     </div>
     
-    <div class="testimonial-card">
-      <div class="testimonial-content">
-        <div class="quote-icon">"</div>
-        <p>As a designer, I appreciate the attention to detail and sleek aesthetics. But it's the performance that truly sets this apart from everything else on the market.</p>
-      </div>
-      <div class="testimonial-author">
-        <img src="/*IMAGE:portrait*/" alt="Michael Chen" class="author-image">
-        <div class="author-info">
-          <h4>Michael Chen</h4>
-          <p>Design Director, CreativeSphere</p>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      <!-- Testimonial Card 1 -->
+      <div class="bg-gray-800 p-8 rounded-2xl">
+        <div class="flex items-center mb-6">
+          <img src="/*IMAGE:person*/" alt="Client" class="w-16 h-16 rounded-full object-cover mr-4">
+          <div>
+            <h3 class="text-xl font-semibold">Sarah Johnson</h3>
+            <p class="text-gray-400">CEO, TechCorp</p>
+          </div>
+        </div>
+        <p class="text-gray-300 leading-relaxed">
+          "The best decision we made was choosing this solution. Our productivity has increased by 200% since implementation."
+        </p>
+        <div class="mt-6 flex text-yellow-400">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <!-- Add star icon SVG path here -->
+          </svg>
+          <!-- Repeat star icons -->
         </div>
       </div>
+      
+      <!-- Add more testimonial cards as needed -->
     </div>
-  </div>
-  
-  <div class="testimonials-dots">
-    <span class="dot active"></span>
-    <span class="dot"></span>
-    <span class="dot"></span>
   </div>
 </section>`,
-    
-    css: `.testimonials {
-  padding: 8rem 0;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  overflow: hidden;
-}
-
-.testimonials-header {
-  text-align: center;
-  max-width: 700px;
-  margin: 0 auto 5rem;
-}
-
-.testimonials-header h2 {
-  font-size: 2.5rem;
-  font-weight: 700;
-  margin-bottom: 1rem;
-  color: #1a1a1a;
-}
-
-.testimonials-header p {
-  font-size: 1.2rem;
-  color: #555;
-}
-
-.testimonials-slider {
-  display: flex;
-  gap: 2rem;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 1rem;
-  overflow-x: hidden;
-}
-
-.testimonial-card {
-  flex: 0 0 100%;
-  max-width: 550px;
-  background: white;
-  border-radius: 12px;
-  padding: 2.5rem;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.05);
-  transition: all 0.3s ease;
-  transform: scale(0.95);
-  opacity: 0.7;
-}
-
-.testimonial-card:nth-child(2) {
-  transform: scale(1);
-  opacity: 1;
-}
-
-.testimonial-content {
-  position: relative;
-  margin-bottom: 2rem;
-}
-
-.quote-icon {
-  position: absolute;
-  top: -30px;
-  left: -10px;
-  font-size: 5rem;
-  color: rgba(94, 114, 228, 0.1);
-  font-family: Georgia, serif;
-}
-
-.testimonial-content p {
-  font-size: 1.1rem;
-  line-height: 1.8;
-  color: #555;
-  position: relative;
-  z-index: 1;
-}
-
-.testimonial-author {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.author-image {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 3px solid #fff;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.08);
-}
-
-.author-info h4 {
-  font-size: 1.1rem;
-  font-weight: 600;
-  margin-bottom: 0.2rem;
-  color: #1a1a1a;
-}
-
-.author-info p {
-  font-size: 0.9rem;
-  color: #777;
-}
-
-.testimonials-dots {
-  display: flex;
-  justify-content: center;
-  gap: 0.5rem;
-  margin-top: 3rem;
-}
-
-.dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: #ccc;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.dot.active {
-  background: #5e72e4;
-  transform: scale(1.2);
-}`
+    css: `/* No custom CSS needed - using Tailwind utility classes */`
   }
 };
 
@@ -642,36 +387,67 @@ function detectWebsiteType(prompt: string): { type: string, isPlainHtml: boolean
 
 // Build dynamic system prompt based on context
 function buildDynamicSystemPrompt(prompt: string): string {
+  const { type, isPlainHtml } = detectWebsiteType(prompt);
+  
+  // Get any domain-specific requirements
+  const domainReqs = DOMAIN_REQUIREMENTS[type] || '';
+  
+  // Check if this is likely a React project
+  const isReactProject = prompt.toLowerCase().includes('react') || prompt.toLowerCase().includes('next.js');
+  
+  // Add React-specific requirements if needed
+  const reactReqs = isReactProject ? `
+- For React/Next.js projects, ensure you:
+  * Include "react-awesome-reveal": "^4.2.8" in package.json dependencies
+  * Import animation components at the top of each file: import { Fade, Slide, Zoom } from 'react-awesome-reveal'
+  * Wrap components in animation elements like <Fade>, <Slide>, etc.
+  * Use proper configuration and props for animations` : '';
+  
   return `
 You are a world-class frontend engineer and designer. 
 You generate complete, production-quality websites from a user's prompt, using only the highest standards of modern web design (Apple/Google-level).
 
 Requirements:
-- Use advanced, modern HTML5, CSS3 (with variables, grid, flexbox, animations, transitions, glassmorphism, etc.), and JavaScript or React/Tailwind if requested.
+- Use Tailwind CSS for ALL projects, regardless of framework choice. Include either the CDN or proper configuration.
+- Follow Tailwind's utility-first approach and mobile-first responsive design principles.
+- Use Tailwind's built-in features for:
+  * Responsive design (sm:, md:, lg:, xl:)
+  * Dark mode support (dark:)
+  * Hover/focus states (hover:, focus:)
+  * Animations and transitions (animate-, transition-)
+  * Custom colors and gradients
+  * Modern UI effects (backdrop-blur, glassmorphism, etc.)
+- Use React Awesome Reveal for animations in React-based projects:
+  * Include import statements from 'react-awesome-reveal' in relevant files
+  * Wrap components with Fade, Slide, Zoom, etc. components from react-awesome-reveal
+  * Use direction and duration props for varied animations
+  * Examples: 
+    - <Fade direction="up" delay={200}><YourComponent /></Fade>
+    - <Slide direction="left"><FeatureCard /></Slide>
+    - <Zoom delay={500}><Testimonial /></Zoom>
+- Apply animations to almost all components (but not excessively):
+  * Hero sections with Fade or Slide
+  * Feature cards with staggered Slide or Fade
+  * Testimonials with Zoom or Fade
+  * CTAs with Attention
+  * Images with Zoom or Fade
+  * Statistics with Bounce or Slide
 - All content must be realistic, domain-appropriate, and high-converting. No Lorem Ipsum.
 - All images must use the /*IMAGE:category*/ placeholder format.
 - The design must be visually stunning, responsive, and interactive.
-- Use only a single, explicit JSON block for the file structure and contents.
+- Use semantic HTML5 elements with appropriate Tailwind classes.
+${reactReqs}
+${domainReqs}
 
 Output format (MANDATORY):
 # Project Plan
 <short, high-level plan>
 \`\`\`json
 {
-  "index.html": "<full HTML here>",
-  "css/styles.css": "<full CSS here>",
-  "js/script.js": "<full JS here>"
-}
-\`\`\`
-
-EXAMPLE OUTPUT:
-# Project Plan
-A modern, visually stunning landing page for a new smartphone, featuring a hero section, features, and testimonials. Uses glassmorphism, gradients, and smooth animations.
-\`\`\`json
-{
-  "index.html": "<!DOCTYPE html>...<body>...<img src=/*IMAGE:hero*/>...</body></html>",
-  "css/styles.css": ":root { --primary: #111; } body { ... animation ... glassmorphism ... }",
-  "js/script.js": "// Smooth scroll, reveal animations, etc."
+  "index.html": "<!DOCTYPE html><html>...<head><script src='https://cdn.tailwindcss.com'></script>...</head><body class='bg-gray-50'>...</body></html>",
+  "tailwind.config.js": "module.exports = { theme: { extend: {...} }, plugins: [...] }",
+  "css/styles.css": "@tailwind base; @tailwind components; @tailwind utilities; /* Custom styles */",
+  "js/script.js": "// Interactive features"
 }
 \`\`\`
 

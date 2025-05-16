@@ -46,39 +46,35 @@ export default async function handler(
         ragAvailable = true;
         
         // Step 2: Format retrieved components to use as context for OpenAI
-        contextString = "Use these component examples as inspiration for generating high-quality code:\n\n";
+        contextString = "Use these Tailwind CSS component examples as inspiration for generating high-quality code:\n\n";
         
-        // Add hero component examples
-        if (ragComponents.hero && ragComponents.hero.length > 0) {
-          contextString += "## Hero Component Examples:\n";
-          ragComponents.hero.forEach((comp: WebComponent, i: number) => {
-            contextString += `### Hero Example ${i+1}:\n\`\`\`\n${comp.code}\n\`\`\`\n\n`;
-          });
-        }
+        // Process each component type and add to context
+        const componentTypes = [
+          { type: 'hero' as keyof typeof ragComponents, label: 'Hero Component' },
+          { type: 'navbar' as keyof typeof ragComponents, label: 'Navbar Component' },
+          { type: 'features' as keyof typeof ragComponents, label: 'Features Component' },
+          { type: 'footer' as keyof typeof ragComponents, label: 'Footer Component' },
+          { type: 'testimonials' as keyof typeof ragComponents, label: 'Testimonials Component' },
+          { type: 'pricing' as keyof typeof ragComponents, label: 'Pricing Component' },
+          { type: 'cta' as keyof typeof ragComponents, label: 'Call-to-Action Component' },
+          { type: 'stats' as keyof typeof ragComponents, label: 'Statistics Component' },
+          { type: 'team' as keyof typeof ragComponents, label: 'Team Component' },
+          { type: 'contact' as keyof typeof ragComponents, label: 'Contact Component' },
+          { type: 'faq' as keyof typeof ragComponents, label: 'FAQ Component' },
+          { type: 'gallery' as keyof typeof ragComponents, label: 'Gallery Component' },
+          { type: 'blog' as keyof typeof ragComponents, label: 'Blog Component' },
+          { type: 'newsletter' as keyof typeof ragComponents, label: 'Newsletter Component' }
+        ];
         
-        // Add navbar component examples
-        if (ragComponents.navbar && ragComponents.navbar.length > 0) {
-          contextString += "## Navbar Component Examples:\n";
-          ragComponents.navbar.forEach((comp: WebComponent, i: number) => {
-            contextString += `### Navbar Example ${i+1}:\n\`\`\`\n${comp.code}\n\`\`\`\n\n`;
-          });
-        }
-        
-        // Add features component examples
-        if (ragComponents.features && ragComponents.features.length > 0) {
-          contextString += "## Features Component Examples:\n";
-          ragComponents.features.forEach((comp: WebComponent, i: number) => {
-            contextString += `### Features Example ${i+1}:\n\`\`\`\n${comp.code}\n\`\`\`\n\n`;
-          });
-        }
-        
-        // Add footer component examples
-        if (ragComponents.footer && ragComponents.footer.length > 0) {
-          contextString += "## Footer Component Examples:\n";
-          ragComponents.footer.forEach((comp: WebComponent, i: number) => {
-            contextString += `### Footer Example ${i+1}:\n\`\`\`\n${comp.code}\n\`\`\`\n\n`;
-          });
-        }
+        // Add each component type to context string
+        componentTypes.forEach(({ type, label }) => {
+          if (ragComponents[type] && ragComponents[type].length > 0) {
+            contextString += `## ${label} Examples:\n`;
+            ragComponents[type].forEach((comp: WebComponent, i: number) => {
+              contextString += `### ${label} Example ${i+1}:\n\`\`\`\n${comp.code}\n\`\`\`\n\n`;
+            });
+          }
+        });
       } else {
         console.log("Weaviate environment variables not set, skipping RAG retrieval");
       }
@@ -97,7 +93,7 @@ export default async function handler(
       });
     }
     
-    // Step 3: Generate website code with OpenAI using RAG context
+    // Step 3: Generate website code with OpenAI using RAG context and Tailwind
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o',
       messages: [
@@ -106,21 +102,48 @@ export default async function handler(
           content: `You are a world-class frontend engineer and designer. Generate complete, production-quality websites from a user's prompt, using only the highest standards of modern web design (Apple/Google-level).
 
 Requirements:
-- Use advanced, modern HTML5 and Tailwind CSS (with utility-first design, responsive layouts, and custom themes) for all projects, regardless of the framework.
+- Use Tailwind CSS by default for ALL projects. Include the Tailwind CDN or configuration as needed.
+- Utilize Tailwind's utility classes for responsive design, animations, and modern UI effects.
+- Follow Tailwind's mobile-first approach and use responsive prefixes (sm:, md:, lg:, xl:).
+- Use semantic HTML5 elements with appropriate Tailwind classes.
+- Use React Awesome Reveal for animations in React-based projects:
+  * Include import statements from 'react-awesome-reveal' in relevant files
+  * Wrap components with Fade, Slide, Zoom, etc. components from react-awesome-reveal
+  * Use direction and duration props for varied animations
+  * Examples: 
+    - <Fade direction="up" delay={200}><YourComponent /></Fade>
+    - <Slide direction="left"><FeatureCard /></Slide>
+    - <Zoom delay={500}><Testimonial /></Zoom>
+- Apply animations to almost all components (but not excessively):
+  * Hero sections with Fade or Slide
+  * Feature cards with staggered Slide or Fade
+  * Testimonials with Zoom or Fade
+  * CTAs with Attention
+  * Images with Zoom or Fade
+  * Statistics with Bounce or Slide
 - All content must be realistic, domain-appropriate, and high-converting. No Lorem Ipsum.
-- All images must use the /*IMAGE:category*/ placeholder format.
-- The design must be visually stunning, responsive, and interactive.
+- For images, use specific, descriptive /*IMAGE:category*/ placeholders:
+  * Use precise categories that match the website's topic (e.g., "/*IMAGE:gym_equipment*/", "/*IMAGE:restaurant_dish*/")
+  * For people, specify demographics that match target audience (e.g., "/*IMAGE:business_woman*/", "/*IMAGE:fitness_trainer*/")
+  * Add descriptive adjectives for better image selection (e.g., "/*IMAGE:luxury_interior*/", "/*IMAGE:professional_team*/")
+- The design must be visually stunning with:
+  * Modern glassmorphism effects and subtle gradients
+  * Micro-interactions and hover effects
+  * Consistent color schemes throughout components
+  * Mobile-first responsive design
+  * Clear visual hierarchy and ample whitespace
 - Use only a single, explicit JSON block for the file structure and contents.
-- Use the provided component examples for inspiration to maintain high quality and consistency.
+- Create a cohesive, complete website that includes all necessary sections (hero, features, testimonials, etc.)
 
 Output format (MANDATORY):
 # Project Plan
 <short, high-level plan>
 \`\`\`json
 {
-  "index.html": "<full HTML here>",
-  "css/styles.css": "<full CSS here>",
-  "js/script.js": "<full JS here>"
+  "index.html": "<!DOCTYPE html><html>...<head><script src='https://cdn.tailwindcss.com'></script>...</head><body class='bg-gray-50'>...</body></html>",
+  "tailwind.config.js": "module.exports = { theme: { extend: {...} }, plugins: [...] }",
+  "css/styles.css": "@tailwind base; @tailwind components; @tailwind utilities; /* Custom styles */",
+  "js/script.js": "// Interactive features"
 }
 \`\`\`
 
@@ -128,7 +151,7 @@ Do not include any other code blocks or explanations. Only output the plan and t
         },
         { 
           role: 'user', 
-          content: `${contextString}\n\nNow, based on these examples, generate a complete website for the following request: ${prompt}` 
+          content: `${contextString}\n\nNow, based on these examples, generate a complete website with Tailwind CSS for the following request: ${prompt}` 
         }
       ],
       temperature: 0.7,
