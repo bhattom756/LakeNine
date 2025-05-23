@@ -19,6 +19,15 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+
+  async rewrites() {
+    return [
+      {
+        source: '/api/dashboard/:path*',
+        destination: 'https://backend.spendingcalculator.xyz/dashboard/:path*',
+      },
+    ];
+  },
 };
 
 export default nextConfig;

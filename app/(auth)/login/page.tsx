@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, CSSProperties } from "react";
-import { loginWithEmail, signInWithGoogle } from "@/lib/firebase";
+import { loginWithEmail, signInWithGoogle, resetPassword, handleRedirectResult } from "@/lib/firebase";
 import { useUser } from "@/context/UserContext";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -19,11 +19,41 @@ export default function LoginPage() {
   const [error, setError] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isResetLoading, setIsResetLoading] = useState(false);
 
   const spinnerOverride: CSSProperties = {
     display: "block",
     margin: "0 auto",
   };
+
+  // Check for redirect result on initial load
+  useEffect(() => {
+    const checkRedirect = async () => {
+      try {
+        setIsGoogleLoading(true);
+        const result = await handleRedirectResult();
+        if (result?.user) {
+          toast.success("Signed in with Google successfully!");
+          router.push("/");
+        }
+      } catch (err: any) {
+        console.error("Redirect error:", err);
+        let errorMessage = "Google sign-in failed. Please try again.";
+        
+        if (err.code === "auth/account-exists-with-different-credential") {
+          errorMessage = "An account already exists with a different sign-in method.";
+        } else if (err.code === "auth/network-request-failed") {
+          errorMessage = "Network error. Please check your internet connection.";
+        }
+        
+        toast.error(errorMessage);
+      } finally {
+        setIsGoogleLoading(false);
+      }
+    };
+    
+    checkRedirect();
+  }, [router]);
 
   useEffect(() => {
     if (user) {
@@ -71,25 +101,97 @@ export default function LoginPage() {
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
     try {
+      // This will trigger a redirect - the page will reload
       await signInWithGoogle();
-      toast.success("Signed in with Google successfully!");
-      router.push("/");
+      // The code below won't execute since the page will reload
     } catch (err: any) {
-      let errorMessage = "Google sign-in failed. Please try again.";
-      
-      if (err.code === "auth/popup-closed-by-user") {
-        errorMessage = "Sign-in was cancelled. Please try again.";
-      } else if (err.code === "auth/popup-blocked") {
-        errorMessage = "Pop-up was blocked. Please allow pop-ups for this site.";
-      } else if (err.code === "auth/cancelled-popup-request") {
-        errorMessage = "Sign-in was cancelled. Please try again.";
-      } else if (err.code === "auth/network-request-failed") {
-        errorMessage = "Network error. Please check your internet connection.";
+      setIsGoogleLoading(false);
+      const errorMessage = "Failed to start Google sign-in. Please try again.";
+      toast.error(errorMessage);
+      console.error("Google sign-in redirect initiation error:", err);
+    }
+  };
+
+  const handleResetPassword = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    
+    if (!email) {
+      toast.error("Please enter your email address above", {
+        id: "reset-error-email",
+        duration: 4000
+      });
+      return;
+    }
+    
+    // Show loading toast that we'll update later
+    const loadingToastId = toast.loading("Sending password reset email...", {
+      duration: 10000 // Long duration since we'll dismiss it manually
+    });
+    
+    setIsResetLoading(true);
+    
+    try {
+      // Validate email format client-side first
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        throw { code: "auth/invalid-email" };
       }
       
-      toast.error(errorMessage);
+      // Try to send the reset email
+      console.log("Attempting password reset for:", email);
+      
+      // Import directly from firebase to ensure we're using the right function
+      const result = await resetPassword(email);
+      console.log("Reset email result:", result);
+      
+      // Success - update the loading toast
+      toast.success(`Reset link sent to ${email}. Check your inbox and spam folder.`, {
+        id: loadingToastId,
+        duration: 5000
+      });
+      
+      // Clear the email field to indicate success
+      setEmail("");
+    } catch (err: any) {
+      console.error("Password reset error:", err);
+      
+      // Create a detailed error log
+      if (err.code) console.log("Error code:", err.code);
+      if (err.message) console.log("Error message:", err.message);
+      if (err.name) console.log("Error name:", err.name);
+      
+      // Handle specific error cases
+      let errorMessage = "Failed to send reset email. Please try again.";
+      
+      if (err.code === "auth/user-not-found") {
+        // We don't want to reveal if an email exists or not for security reasons
+        // So we show a generic success message even if the email doesn't exist
+        toast.success(`If an account exists for ${email}, a password reset link will be sent.`, {
+          id: loadingToastId,
+          duration: 5000
+        });
+        setIsResetLoading(false);
+        return;
+      } else if (err.code === "auth/invalid-email") {
+        errorMessage = "Please enter a valid email address.";
+      } else if (err.code === "auth/network-request-failed") {
+        errorMessage = "Network error. Please check your internet connection.";
+      } else if (err.code === "auth/missing-continue-uri") {
+        errorMessage = "Configuration error. Please contact support.";
+      } else if (err.code === "auth/unauthorized-continue-uri") {
+        errorMessage = "The redirect URL is not authorized. Please contact support.";
+      } else if (err.code) {
+        errorMessage = `Error: ${err.code}`;
+      } else if (err.message) {
+        errorMessage = `Error: ${err.message}`;
+      }
+      
+      // Error - update the loading toast to error
+      toast.error(errorMessage, {
+        id: loadingToastId,
+        duration: 4000
+      });
     } finally {
-      setIsGoogleLoading(false);
+      setIsResetLoading(false);
     }
   };
 
@@ -97,7 +199,11 @@ export default function LoginPage() {
     <>
       <div className="min-h-screen flex flex-col items-center bg-black text-white px-4 py-12">
         <div className="flex items-center justify-center gap-x-4">
-          <Image src={LoginLogo} height={60} width={60} alt="login-image" />
+        <div className="size-12 text-[#135feb]">
+          <svg fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+            <path d="M42.4379 44C42.4379 44 36.0744 33.9038 41.1692 24C46.8624 12.9336 42.2078 4 42.2078 4L7.01134 4C7.01134 4 11.6577 12.932 5.96912 23.9969C0.876273 33.9029 7.27094 44 7.27094 44L42.4379 44Z" fill="currentColor"></path>
+          </svg>
+        </div>
           <h1 className="font-semibold text-5xl">LakeNine.Ai</h1>
         </div>
         
@@ -172,6 +278,17 @@ export default function LoginPage() {
             >
               Sign up
             </Link>
+          </div>
+
+          <div className="text-center text-sm text-gray-400 mt-2">
+            Forget your password?{" "}
+            <button
+              onClick={handleResetPassword}
+              className="text-purple-400 hover:text-blue-300"
+              disabled={isResetLoading}
+            >
+              {isResetLoading ? "Sending..." : "Reset Password"}
+            </button>
           </div>
         </form>
 

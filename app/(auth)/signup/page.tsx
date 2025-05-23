@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, CSSProperties } from "react";
-import { registerWithEmail, loginWithEmail, signInWithGoogle } from "@/lib/firebase";
+import { registerWithEmail, loginWithEmail, signUpWithGoogle, handleRedirectResult } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import LoginLogo from "@/public/loginLogo.png";
@@ -22,6 +22,39 @@ export default function SignupPage() {
     display: "block",
     margin: "0 auto",
   };
+
+  // Check for redirect results on initial load
+  useEffect(() => {
+    const checkRedirect = async () => {
+      try {
+        setIsGoogleLoading(true);
+        const result = await handleRedirectResult();
+        if (result?.user) {
+          if (result.isNewUser) {
+            toast.success("Account created with Google successfully!");
+          } else {
+            toast.success("Signed in with existing Google account!");
+          }
+          router.push("/");
+        }
+      } catch (err: any) {
+        console.error("Redirect error:", err);
+        let errorMessage = "Google sign-up failed. Please try again.";
+        
+        if (err.code === "auth/account-exists-with-different-credential") {
+          errorMessage = "An account already exists with a different sign-in method.";
+        } else if (err.code === "auth/network-request-failed") {
+          errorMessage = "Network error. Please check your internet connection.";
+        }
+        
+        toast.error(errorMessage);
+      } finally {
+        setIsGoogleLoading(false);
+      }
+    };
+    
+    checkRedirect();
+  }, [router]);
 
   // Password strength checker
   useEffect(() => {
@@ -73,7 +106,26 @@ export default function SignupPage() {
       let errorMessage = "Failed to create account. Please try again.";
 
       if (err.code === "auth/email-already-in-use") {
-        errorMessage = "This email is already registered. Please log in instead.";
+        errorMessage = "This email is already registered.";
+        toast.error(
+          (t) => (
+            <div className="flex flex-col gap-2">
+              <span>This email is already registered.</span>
+              <button
+                onClick={() => {
+                  router.push("/login");
+                  toast.dismiss(t.id);
+                }}
+                className="bg-blue-500 text-white text-xs py-1 px-2 rounded hover:bg-blue-600"
+              >
+                Sign in instead
+              </button>
+            </div>
+          ),
+          { duration: 5000 }
+        );
+        setIsLoading(false);
+        return;
       } else if (err.code === "auth/invalid-email") {
         errorMessage = "Please enter a valid email address.";
       } else if (err.code === "auth/operation-not-allowed") {
@@ -93,25 +145,14 @@ export default function SignupPage() {
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
     try {
-      await signInWithGoogle();
-      toast.success("Signed in with Google successfully!");
-      router.push("/");
+      // This will trigger a redirect - the page will reload
+      await signUpWithGoogle();
+      // The code below won't execute since the page will reload
     } catch (err: any) {
-      let errorMessage = "Google sign-in failed. Please try again.";
-
-      if (err.code === "auth/popup-closed-by-user") {
-        errorMessage = "Sign-in was cancelled. Please try again.";
-      } else if (err.code === "auth/popup-blocked") {
-        errorMessage = "Pop-up was blocked. Please allow pop-ups for this site.";
-      } else if (err.code === "auth/cancelled-popup-request") {
-        errorMessage = "Sign-in was cancelled. Please try again.";
-      } else if (err.code === "auth/network-request-failed") {
-        errorMessage = "Network error. Please check your internet connection.";
-      }
-
-      toast.error(errorMessage);
-    } finally {
       setIsGoogleLoading(false);
+      const errorMessage = "Failed to start Google sign-up. Please try again.";
+      toast.error(errorMessage);
+      console.error("Google sign-up redirect initiation error:", err);
     }
   };
 
@@ -119,7 +160,11 @@ export default function SignupPage() {
     <>
       <div className="min-h-screen flex flex-col items-center bg-black text-white px-4 py-12">
         <div className="flex items-center justify-center gap-x-4">
-          <Image src={LoginLogo} height={60} width={60} alt="signup-image" />
+        <div className="size-12 text-[#135feb]">
+          <svg fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+            <path d="M42.4379 44C42.4379 44 36.0744 33.9038 41.1692 24C46.8624 12.9336 42.2078 4 42.2078 4L7.01134 4C7.01134 4 11.6577 12.932 5.96912 23.9969C0.876273 33.9029 7.27094 44 7.27094 44L42.4379 44Z" fill="currentColor"></path>
+          </svg>
+        </div>
           <h1 className="font-semibold text-5xl">LakeNine.Ai</h1>
         </div>
         <form
@@ -209,7 +254,7 @@ export default function SignupPage() {
             <span className="text-lg">
               <Image src={google} height={30} width={30} alt="google-signup" />
             </span>
-            Continue with Google
+            Sign up with Google
           </button>
 
           {/* Login Redirect */}
