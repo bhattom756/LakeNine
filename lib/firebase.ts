@@ -35,8 +35,30 @@ const firebaseConfig = {
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const auth = getAuth(app);
 
-// Set session persistence (user will be logged out when browser/tab is closed)
-if (typeof window !== "undefined") {
+// Configure auth to use the correct auth domain
+if (typeof window !== 'undefined') {
+  // Ensure we're using the correct auth domain
+  auth.config.authDomain = firebaseConfig.authDomain;
+  
+  // Special handling for localhost
+  if (window.location.hostname === 'localhost') {
+    console.log("Detected localhost environment - applying special configuration");
+    
+    // For localhost, we need to use the authDomain from Firebase console
+    // but also ensure cookies work correctly
+    document.cookie = "firebase-session-test=1; SameSite=None; Secure";
+    
+    // Some browsers need extra help with localhost
+    if (window.location.protocol !== 'https:') {
+      console.warn("Using Firebase Auth with http: instead of https: can cause issues with cookies");
+    }
+  }
+  
+  // Force compatibility with localhost
+  const currentUrl = new URL(window.location.href);
+  console.log("Current URL for auth:", currentUrl.toString());
+  
+  // Set proper persistence
   setPersistence(auth, browserSessionPersistence)
     .catch((error) => {
       console.error("Error setting auth persistence:", error);
@@ -75,9 +97,31 @@ const loginWithEmail = (email: string, password: string) =>
 const signInWithGoogle = async () => {
   try {
     console.log("Starting Google sign-in process (redirect)");
-    // Always use redirect method
+    
+    // Configure redirect properly
+    if (typeof window !== 'undefined') {
+      // Store the current URL as a state parameter to return to after auth
+      const currentUrl = window.location.href;
+      localStorage.setItem('authRedirectUrl', currentUrl);
+      console.log("Stored redirect URL:", currentUrl);
+      
+      // Configure provider with proper parameters
+      googleProvider.setCustomParameters({
+        prompt: 'select_account',
+        // Add login_hint if available
+        login_hint: localStorage.getItem('lastEmail') || '',
+        // This helps with localhost development
+        hd: '*'
+      });
+      
+      // Clear any pending redirect operations to avoid conflicts
+      await auth._initializationPromise;
+      console.log("Auth initialization complete, proceeding with redirect");
+    }
+    
+    // Always use redirect method for better mobile experience
     await signInWithRedirect(auth, googleProvider);
-    return null; // Page will reload
+    return null; // Page will reload after redirect
   } catch (error: any) {
     console.error("Google sign-in redirect error:", error);
     throw error;
@@ -89,13 +133,48 @@ const handleRedirectResult = async () => {
   if (typeof window === 'undefined') return null;
   
   try {
+    console.log("Checking for Google redirect result...");
+    console.log("Current URL:", window.location.href);
+    
+    // First check if we already have a user
+    if (auth.currentUser) {
+      console.log("User already signed in:", auth.currentUser.email);
+      // Store email for future hints
+      if (auth.currentUser.email) {
+        localStorage.setItem('lastEmail', auth.currentUser.email);
+      }
+      const isNewUser = auth.currentUser.metadata.creationTime === auth.currentUser.metadata.lastSignInTime;
+      return { user: auth.currentUser, isNewUser };
+    }
+
+    // Try to get redirect result
+    console.log("No current user, checking redirect result...");
     const result = await getRedirectResult(auth);
-    if (result) {
-      console.log("Got Google redirect result:", result);
+    
+    if (result && result.user) {
+      console.log("Successfully got Google redirect result:", result.user.email);
+      
+      // Store email for future hints
+      if (result.user.email) {
+        localStorage.setItem('lastEmail', result.user.email);
+      }
+      
       // Determine if this was a sign-up or sign-in based on user metadata
       const isNewUser = result.user.metadata.creationTime === result.user.metadata.lastSignInTime;
+      
+      // Check if we need to redirect back to the original URL
+      const redirectUrl = localStorage.getItem('authRedirectUrl');
+      if (redirectUrl) {
+        console.log("Found stored redirect URL:", redirectUrl);
+        // Clear it so we don't redirect again
+        localStorage.removeItem('authRedirectUrl');
+      }
+      
       return { user: result.user, isNewUser };
+    } else {
+      console.log("No redirect result found");
     }
+    
     return null;
   } catch (error) {
     console.error("Error handling redirect result:", error);
@@ -111,18 +190,92 @@ const signUpWithGoogle = async () => {
 };
 
 // Send magic link to email (for email link auth)
-const sendLoginLink = (email: string) =>
-  sendSignInLinkToEmail(auth, email, {
-    url: window.location.origin + "/login",
-    handleCodeInApp: true,
-  });
+const sendLoginLink = async (email: string) => {
+  try {
+    if (typeof window === 'undefined') {
+      throw new Error('Email link authentication requires browser environment');
+    }
+    
+    console.log("Preparing to send email login link to:", email);
+    
+    // Store the email in localStorage for later use with signInWithEmailLink
+    localStorage.setItem('emailForSignIn', email);
+    
+    // Create action code settings with the correct redirect URL
+    const actionCodeSettings = {
+      // URL needs to be absolute
+      url: `${window.location.origin}/login`,
+      handleCodeInApp: true,
+    };
+    
+    console.log("Sending login link with settings:", actionCodeSettings);
+    
+    // Send the link
+    await sendSignInLinkToEmail(auth, email, actionCodeSettings);
+    
+    console.log("Email login link sent successfully");
+    
+    return true;
+  } catch (error: any) {
+    console.error("Error sending login link:", error);
+    
+    // Add detailed logging for debugging
+    if (error.code) {
+      console.error("Error code:", error.code);
+    }
+    
+    throw error;
+  }
+};
 
 // Check if current URL is sign-in with email link
-const checkIfEmailLink = (url: string) => isSignInWithEmailLink(auth, url);
+const checkIfEmailLink = (url: string = '') => {
+  if (typeof window === 'undefined') return false;
+  
+  const linkToCheck = url || window.location.href;
+  console.log("Checking if URL is email sign-in link:", linkToCheck);
+  
+  const result = isSignInWithEmailLink(auth, linkToCheck);
+  console.log("Is email sign-in link:", result);
+  
+  return result;
+};
 
 // Complete sign-in with email link
-const loginWithEmailLink = (email: string, link: string) =>
-  signInWithEmailLink(auth, email, link);
+const loginWithEmailLink = async (email: string = '', link: string = '') => {
+  try {
+    if (typeof window === 'undefined') {
+      throw new Error('Email link authentication requires browser environment');
+    }
+
+    // Get the email from storage if not provided
+    const emailToUse = email || localStorage.getItem('emailForSignIn');
+    if (!emailToUse) {
+      throw new Error('No email found for sign-in. Please provide your email again.');
+    }
+    
+    // Get the link from the current URL if not provided
+    const linkToUse = link || window.location.href;
+    
+    console.log("Attempting to sign in with email link:", {
+      email: emailToUse,
+      linkProvided: !!link
+    });
+    
+    // Sign in with the link
+    const result = await signInWithEmailLink(auth, emailToUse, linkToUse);
+    
+    // Clear the stored email
+    localStorage.removeItem('emailForSignIn');
+    
+    console.log("Email link sign-in successful:", result.user.email);
+    
+    return result;
+  } catch (error: any) {
+    console.error("Error signing in with email link:", error);
+    throw error;
+  }
+};
 
 // Get auth state
 const onUserChange = (cb: (user: User | null) => void) =>
@@ -169,19 +322,98 @@ const resetPassword = async (email: string) => {
   }
 };
 
+// Verify Firebase authentication configuration
+const verifyAuthConfig = async () => {
+  if (typeof window === 'undefined') return;
+  
+  console.log("Verifying Firebase auth configuration...");
+  console.log("Current origin:", window.location.origin);
+  
+  // Check if auth domain matches current origin
+  const authDomainMatches = firebaseConfig.authDomain.includes(window.location.hostname);
+  console.log(`Auth domain ${firebaseConfig.authDomain} matches current hostname: ${authDomainMatches}`);
+  
+  // Check if there are any pending redirects - with safe error handling
+  try {
+    // Use a standard Firebase call instead of accessing internals
+    console.log("Checking for pending redirects...");
+    await getRedirectResult(auth)
+      .then(result => {
+        console.log("Pending redirect check:", result ? "Yes" : "No");
+      })
+      .catch(e => {
+        console.error("Error checking for pending redirects:", e);
+      });
+  } catch (e) {
+    console.error("Error in redirect check:", e);
+  }
+  
+  // Print public config info only
+  console.log("Firebase Config:", {
+    authDomain: firebaseConfig.authDomain,
+    projectId: firebaseConfig.projectId
+  });
+  
+  // Print auth state safely
+  console.log("Auth State:", {
+    currentUser: auth.currentUser ? {
+      uid: auth.currentUser.uid,
+      email: auth.currentUser.email,
+      emailVerified: auth.currentUser.emailVerified,
+      isAnonymous: auth.currentUser.isAnonymous
+    } : null
+  });
+};
+
+// Sign in with Google using Popup (alternative to redirect for troubleshooting)
+const signInWithGooglePopup = async () => {
+  try {
+    console.log("Starting Google sign-in with popup");
+    
+    // Configure provider
+    googleProvider.setCustomParameters({
+      prompt: 'select_account',
+      login_hint: localStorage.getItem('lastEmail') || '',
+    });
+    
+    // Use popup method
+    const result = await signInWithPopup(auth, googleProvider);
+    console.log("Google popup sign-in successful:", result.user.email);
+    
+    // Store email for future hints
+    if (result.user.email) {
+      localStorage.setItem('lastEmail', result.user.email);
+    }
+    
+    return result;
+  } catch (error: any) {
+    console.error("Google popup sign-in error:", error);
+    throw error;
+  }
+};
+
+// Export all functions and objects
 export {
-    auth,
-    googleProvider,
-    signInWithGoogle,
-    signUpWithGoogle,
-    handleRedirectResult,
-    registerWithEmail,
-    loginWithEmail,
-    sendLoginLink,
-    loginWithEmailLink,
-    checkIfEmailLink,
-    onUserChange,
-    resetPassword,
-    logout, onAuthStateChanged, signOut, signInWithEmailAndPassword
-};    export type { User };
+  auth,
+  app,
+  googleProvider,
+  registerWithEmail,
+  loginWithEmail,
+  signInWithGoogle,
+  signInWithGooglePopup,
+  signUpWithGoogle,
+  handleRedirectResult,
+  sendLoginLink,
+  checkIfEmailLink,
+  loginWithEmailLink,
+  onUserChange,
+  logout,
+  resetPassword,
+  verifyAuthConfig,
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  signOut
+};
+
+export type { User };
 

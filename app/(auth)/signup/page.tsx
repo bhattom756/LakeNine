@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, CSSProperties } from "react";
-import { registerWithEmail, loginWithEmail, signUpWithGoogle, handleRedirectResult } from "@/lib/firebase";
+import { registerWithEmail, loginWithEmail, signUpWithGoogle, handleRedirectResult, verifyAuthConfig } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import LoginLogo from "@/public/loginLogo.png";
@@ -23,22 +23,40 @@ export default function SignupPage() {
     margin: "0 auto",
   };
 
+  // Verify Firebase auth config on mount
+  useEffect(() => {
+    verifyAuthConfig();
+  }, []);
+
   // Check for redirect results on initial load
   useEffect(() => {
+    // Add a console log to track when the effect runs
+    console.log("Signup page loaded, checking for redirect results");
+    
     const checkRedirect = async () => {
       try {
         setIsGoogleLoading(true);
+        console.log("Checking for redirect result in signup page");
         const result = await handleRedirectResult();
+        console.log("Redirect result processed:", result);
+        
         if (result?.user) {
+          console.log("Successfully authenticated user after redirect:", result.user.email);
           if (result.isNewUser) {
             toast.success("Account created with Google successfully!");
           } else {
             toast.success("Signed in with existing Google account!");
           }
-          router.push("/");
+          // Add a delay before redirecting to ensure the toast is shown
+          setTimeout(() => {
+            router.push("/");
+          }, 500);
+        } else {
+          console.log("No redirect result found");
+          setIsGoogleLoading(false);
         }
       } catch (err: any) {
-        console.error("Redirect error:", err);
+        console.error("Redirect error in signup page:", err);
         let errorMessage = "Google sign-up failed. Please try again.";
         
         if (err.code === "auth/account-exists-with-different-credential") {
@@ -48,7 +66,6 @@ export default function SignupPage() {
         }
         
         toast.error(errorMessage);
-      } finally {
         setIsGoogleLoading(false);
       }
     };
@@ -145,6 +162,7 @@ export default function SignupPage() {
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
     try {
+      console.log("Starting Google sign-up redirect");
       // This will trigger a redirect - the page will reload
       await signUpWithGoogle();
       // The code below won't execute since the page will reload

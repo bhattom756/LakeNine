@@ -9,15 +9,16 @@ import {
 } from "react";
 import {
   auth,
-  onAuthStateChanged,
   signInWithEmailAndPassword,
   signOut,
   type User as FirebaseUser,
 } from "@/lib/firebase";
+import { useAuthState } from 'react-firebase-hooks/auth';
 
 interface UserContextType {
   user: FirebaseUser | null;
   loading: boolean;
+  error: Error | undefined;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -25,27 +26,29 @@ interface UserContextType {
 const UserContext = createContext<UserContextType>({
   user: null,
   loading: true,
+  error: undefined,
   login: async () => {},
   logout: async () => {},
 });
 
 export function UserProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<FirebaseUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Use react-firebase-hooks for auth state
+  const [user, loading, error] = useAuthState(auth);
 
+  // For debugging
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      setUser(firebaseUser);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
+    if (user) {
+      console.log("UserContext: Auth state changed - user signed in:", user.email);
+    } else if (!loading) {
+      console.log("UserContext: Auth state changed - user signed out");
+    }
+  }, [user, loading]);
 
   const login = async (email: string, password: string) => {
     try {
       await signInWithEmailAndPassword(auth, email, password);
     } catch (error) {
+      console.error("Login error in UserContext:", error);
       throw error;
     }
   };
@@ -53,14 +56,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     try {
       await signOut(auth);
-      setUser(null);
     } catch (error) {
-      console.error("Logout error:", error);
+      console.error("Logout error in UserContext:", error);
+      throw error;
     }
   };
 
   return (
-    <UserContext.Provider value={{ user, loading, login, logout }}>
+    <UserContext.Provider value={{ user, loading, error, login, logout }}>
       {children}
     </UserContext.Provider>
   );
