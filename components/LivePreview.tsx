@@ -4,6 +4,11 @@ import { useEffect, useRef, useMemo, useState } from 'react';
 import { bootWebContainer, createFiles, installDependencies, startDevServer } from '@/lib/webcontainer';
 import { WebContainer } from '@webcontainer/api';
 import { ClipLoader } from 'react-spinners';
+import { IoIosRefresh } from "react-icons/io";
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { FaArrowRightToBracket } from "react-icons/fa6";
+
 
 interface LivePreviewProps {
   generatedCode: string;
@@ -126,17 +131,16 @@ export default function LivePreview({ generatedCode, projectFiles = {} }: LivePr
         }
         
         // Mount files
-        await createFiles(webcontainerInstance, filesToMount);
-        
-        // Install dependencies
-        await installDependencies(webcontainerInstance);
-        
-        // Start dev server
-        const { serverUrl } = await startDevServer(webcontainerInstance);
-        
-        // Load the URL in the iframe
-        if (iframeRef.current) {
-          iframeRef.current.src = serverUrl;
+        if (webcontainerInstance) {
+          await createFiles(webcontainerInstance, filesToMount);
+          // Install dependencies
+          await installDependencies(webcontainerInstance);
+          // Start dev server
+          const { serverUrl } = await startDevServer(webcontainerInstance);
+          // Load the URL in the iframe
+          if (iframeRef.current) {
+            iframeRef.current.src = serverUrl;
+          }
         }
         
       } catch (err) {
@@ -228,41 +232,61 @@ export default function LivePreview({ generatedCode, projectFiles = {} }: LivePr
   }, [mainHtml, projectFiles, shouldUseWebContainer]);
 
   return (
-    <div className="w-full h-full relative">
-      {loading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-80 z-10">
-          <div className="text-center">
-            <ClipLoader color="#3B82F6" size={40} />
-            <p className="mt-2 text-gray-700">
-              {shouldUseWebContainer ? 'Setting up development environment...' : 'Loading preview...'}
-            </p>
+    <div className="w-full h-full flex flex-col" style={{background: 'white'}}>
+      {/* Top bar */}
+      <div className="w-full px-4 py-3" style={{flex: '0 0 auto', background: '#1a1a1a', color: '#fff', fontWeight: 'bold', fontSize: '1.125rem', margin: 0, letterSpacing: 0, height: '52px', display: 'flex', alignItems: 'center'}}>
+        <div className="flex items-center gap-2 w-full">
+          <button className="flex items-center justify-center p-1 rounded hover:bg-[#23272e] transition-colors" title="Refresh">
+            <IoIosRefresh size={20} />
+          </button>
+          <Input
+            id="preview-url"
+            type="text"
+            placeholder="https://localhost:3000"
+            className="w-full max-w-xs bg-[#23272e] text-white border-none focus:ring-2 focus:ring-blue-500 h-9 px-3 text-sm flex-grow"
+            style={{minWidth: '180px'}}
+          />
+          <Button variant="outline" className="flex items-center gap-1 h-9 px-3 text-sm bg-[#23272e] text-white border-[#36454f] hover:bg-[#2a2a2a] ml-auto">
+            <FaArrowRightToBracket size={16} />
+            Show Terminal
+          </Button>
+        </div>
+      </div>
+      {/* Preview area */}
+      <div className="flex-1 relative flex flex-col" style={{background: 'white', margin: 0, padding: 0}}>
+        {loading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-80 z-10">
+            <div className="text-center">
+              <ClipLoader color="#3B82F6" size={40} />
+              <p className="mt-2 text-gray-700">
+                {shouldUseWebContainer ? 'Setting up development environment...' : 'Loading preview...'}
+              </p>
+            </div>
           </div>
-        </div>
-      )}
-      
-      {error && (
-        <div className="absolute top-0 left-0 right-0 bg-red-100 text-red-700 p-2 text-sm z-10">
-          {error}
-        </div>
-      )}
-      
-      {webcontainerReady && (
-        <div className="absolute top-2 right-2 bg-blue-600 text-white text-xs px-2 py-1 rounded-full z-10 flex items-center">
-          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
-            <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
-            <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
-            <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
-          </svg>
-          WebContainer Active
-        </div>
-      )}
-      
-      <iframe
-        ref={iframeRef}
-        title="Live Preview"
-        className="w-full h-full border-none bg-white"
-        sandbox={shouldUseWebContainer ? "allow-scripts allow-same-origin allow-forms" : "allow-scripts allow-same-origin"}
-      />
+        )}
+        {error && (
+          <div className="absolute top-0 left-0 right-0 bg-red-100 text-red-700 p-2 text-sm z-10">
+            {error}
+          </div>
+        )}
+        {webcontainerReady && (
+          <div className="absolute top-2 right-2 bg-blue-600 text-white text-xs px-2 py-1 rounded-full z-10 flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
+              <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+              <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+              <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+            </svg>
+            WebContainer Active
+          </div>
+        )}
+        <iframe
+          ref={iframeRef}
+          title="Live Preview"
+          className="w-full h-full"
+          style={{border: 'none', borderRadius: 0, margin: 0, padding: 0, boxShadow: 'none', background: 'white', display: 'block'}}
+          sandbox={shouldUseWebContainer ? "allow-scripts allow-same-origin allow-forms" : "allow-scripts allow-same-origin"}
+        />
+      </div>
     </div>
   );
 }

@@ -1,16 +1,14 @@
 "use client";
 
 import { useEffect, useState, CSSProperties } from "react";
-import { loginWithEmail, signInWithGoogle, signInWithGooglePopup, resetPassword, handleRedirectResult, verifyAuthConfig, sendLoginLink, checkIfEmailLink, loginWithEmailLink } from "@/lib/firebase";
+import { loginWithEmail, signInWithGoogle, resetPassword, handleRedirectResult, verifyAuthConfig } from "@/lib/firebase";
 import { useUser } from "@/context/UserContext";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import LoginLogo from "@/public/loginLogo.png";
 import google from "@/public/google.png";
 import toast, { Toaster } from 'react-hot-toast';
 import { ScaleLoader } from "react-spinners";
-import GoogleAuthTroubleshooting from "@/components/GoogleAuthTroubleshooting";
 
 export default function LoginPage() {
   const { user } = useUser();
@@ -21,18 +19,14 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isResetLoading, setIsResetLoading] = useState(false);
-  const [isUsingPopup, setIsUsingPopup] = useState(false);
-  const [isEmailLinkSent, setIsEmailLinkSent] = useState(false);
-  const [isEmailLinkLoading, setIsEmailLinkLoading] = useState(false);
 
   const spinnerOverride: CSSProperties = {
     display: "block",
     margin: "0 auto",
   };
 
-  // CRITICAL: Check for redirect results on initial load
+  // Check for redirect results on initial load
   useEffect(() => {
-    // Add a console log to track when the effect runs
     console.log("Login page loaded, checking for redirect results");
     
     const checkRedirect = async () => {
@@ -45,9 +39,14 @@ export default function LoginPage() {
         if (result?.user) {
           console.log("Successfully authenticated user after redirect:", result.user.email);
           toast.success("Signed in with Google successfully!");
+          
+          // Get the stored redirect path or default to home page
+          const redirectPath = localStorage.getItem('authRedirectPath') || '/';
+          localStorage.removeItem('authRedirectPath'); // Clear it
+          
           // Add a delay before redirecting to ensure the toast is shown
           setTimeout(() => {
-            router.push("/");
+            router.push(redirectPath);
           }, 500);
         } else {
           console.log("No redirect result found");
@@ -61,14 +60,6 @@ export default function LoginPage() {
           errorMessage = "An account already exists with a different sign-in method.";
         } else if (err.code === "auth/network-request-failed") {
           errorMessage = "Network error. Please check your internet connection.";
-        } else if (err.code === "auth/popup-closed-by-user") {
-          errorMessage = "Sign-in popup was closed before completing authentication.";
-        } else if (err.code === "auth/popup-blocked") {
-          errorMessage = "Sign-in popup was blocked by your browser. Please enable popups for this site.";
-          // Switch to redirect method automatically
-          setIsUsingPopup(false);
-        } else if (err.code === "auth/cancelled-popup-request") {
-          errorMessage = "Another popup is already open. Please close it or try again.";
         } else if (err.code) {
           errorMessage = `Error: ${err.code}`;
         }
@@ -83,7 +74,9 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (user) {
-      router.push("/");
+      const redirectPath = localStorage.getItem('authRedirectPath') || '/';
+      localStorage.removeItem('authRedirectPath');
+      router.push(redirectPath);
     }
   }, [user, router]);
 
@@ -91,54 +84,6 @@ export default function LoginPage() {
   useEffect(() => {
     verifyAuthConfig();
   }, []);
-
-  // Check for email link sign-in
-  useEffect(() => {
-    const checkEmailLink = async () => {
-      if (typeof window !== 'undefined' && checkIfEmailLink()) {
-        console.log("Detected email sign-in link in URL");
-        
-        // Get email from localStorage
-        const savedEmail = localStorage.getItem('emailForSignIn');
-        
-        if (savedEmail) {
-          try {
-            setIsEmailLinkLoading(true);
-            console.log("Attempting to sign in with email link using saved email:", savedEmail);
-            
-            const result = await loginWithEmailLink();
-            
-            console.log("Email link sign-in successful:", result.user.email);
-            toast.success("Signed in with email link successfully!");
-            
-            // Redirect after successful sign-in
-            setTimeout(() => {
-              router.push("/");
-            }, 500);
-          } catch (err: any) {
-            console.error("Email link sign-in error:", err);
-            let errorMessage = "Email link sign-in failed. Please try again.";
-            
-            if (err.code === "auth/invalid-action-code") {
-              errorMessage = "The sign-in link has expired or already been used.";
-            } else if (err.message) {
-              errorMessage = err.message;
-            }
-            
-            toast.error(errorMessage);
-          } finally {
-            setIsEmailLinkLoading(false);
-          }
-        } else {
-          console.log("No saved email found for email link sign-in");
-          setEmail(''); // Clear email field so user can enter it again
-          toast.error("Please enter your email to complete sign-in");
-        }
-      }
-    };
-    
-    checkEmailLink();
-  }, [router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -180,38 +125,28 @@ export default function LoginPage() {
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
     try {
-      if (isUsingPopup) {
-        console.log("Starting Google sign-in with popup");
-        // This will not trigger a page reload
-        const result = await signInWithGooglePopup();
-        if (result?.user) {
-          console.log("Successfully signed in with Google popup:", result.user.email);
-          toast.success("Signed in with Google successfully!");
-          // No need for a delay since we're not dealing with a redirect
-          router.push("/");
-        }
-      } else {
-        console.log("Starting Google sign-in redirect");
-        // This will trigger a redirect - the page will reload
-        await signInWithGoogle();
-        // The code below won't execute since the page will reload
+      // Use Google popup authentication
+      const result = await signInWithGoogle();
+      if (result?.user) {
+        toast.success("Signed in with Google successfully!");
+        router.push("/");
       }
     } catch (err: any) {
-      setIsGoogleLoading(false);
-      let errorMessage = "Failed to start Google sign-in. Please try again.";
+      let errorMessage = "Google sign-in failed. Please try again.";
       
       if (err.code === "auth/popup-closed-by-user") {
-        errorMessage = "Sign-in popup was closed. Please try again.";
+        errorMessage = "Sign-in was cancelled. Please try again.";
       } else if (err.code === "auth/popup-blocked") {
-        errorMessage = "Sign-in popup was blocked. Switching to redirect method.";
-        setIsUsingPopup(false);
-        // Try redirect method automatically
-        setTimeout(() => handleGoogleLogin(), 1000);
-        return;
+        errorMessage = "Pop-up was blocked. Please allow pop-ups for this site.";
+      } else if (err.code === "auth/cancelled-popup-request") {
+        errorMessage = "Sign-in was cancelled. Please try again.";
+      } else if (err.code === "auth/network-request-failed") {
+        errorMessage = "Network error. Please check your internet connection.";
       }
       
       toast.error(errorMessage);
-      console.error("Google sign-in error:", err);
+    } finally {
+      setIsGoogleLoading(false);
     }
   };
 
@@ -298,41 +233,6 @@ export default function LoginPage() {
     }
   };
 
-  const handleEmailLinkLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!email) {
-      toast.error("Please enter your email address");
-      return;
-    }
-    
-    setIsEmailLinkLoading(true);
-    
-    try {
-      // Validate email format
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        throw new Error("Please enter a valid email address");
-      }
-      
-      console.log("Sending email login link to:", email);
-      await sendLoginLink(email);
-      
-      setIsEmailLinkSent(true);
-      toast.success(`Sign-in link sent to ${email}. Please check your inbox.`);
-    } catch (err: any) {
-      console.error("Email link send error:", err);
-      let errorMessage = "Failed to send login link. Please try again.";
-      
-      if (err.message) {
-        errorMessage = err.message;
-      }
-      
-      toast.error(errorMessage);
-    } finally {
-      setIsEmailLinkLoading(false);
-    }
-  };
-
   return (
     <>
       <div className="min-h-screen flex flex-col items-center bg-black text-white px-4 py-12">
@@ -345,11 +245,10 @@ export default function LoginPage() {
           <h1 className="font-semibold text-5xl">LakeNine.Ai</h1>
         </div>
         
-
         {/* Login Form */}
         <form
           onSubmit={handleLogin}
-          className="bg-[#1a1a1a] p-12 my-8 rounded-xl w-[30rem]  space-y-4 shadow-lg"
+          className="bg-[#1a1a1a] p-12 my-8 rounded-xl w-[30rem] space-y-4 shadow-lg"
         >
           <label className="text-sm font-medium">Email</label>
           <input
@@ -395,89 +294,29 @@ export default function LoginPage() {
           </div>
 
           {/* Google Login Button */}
-          <div className="w-full flex flex-col gap-4 mt-6">
-            <button
-              type="button"
-              onClick={handleGoogleLogin}
-              disabled={isGoogleLoading}
-              className="flex items-center justify-center gap-2 w-full py-3 px-4 bg-[#2B3040] hover:bg-[#343b52] transition-colors duration-200 rounded-lg border border-solid border-[#374151]"
-            >
-              {isGoogleLoading ? (
-                <ScaleLoader
-                  color="#ffffff"
-                  loading={true}
-                  cssOverride={spinnerOverride}
-                  height={15}
-                  width={3}
-                  radius={1}
-                  margin={2}
-                />
-              ) : (
-                <>
-                  <Image alt="Google" src={google} width={20} height={20} />
-                  <span>Continue with Google {isUsingPopup ? "(Popup)" : "(Redirect)"}</span>
-                </>
-              )}
-            </button>
-            
-            <button
-              type="button"
-              onClick={() => setIsUsingPopup(!isUsingPopup)}
-              className="text-xs text-gray-400 hover:text-gray-300 transition-colors duration-200"
-            >
-              Switch to {isUsingPopup ? "redirect" : "popup"} method
-            </button>
-            
-            <GoogleAuthTroubleshooting />
-          </div>
-
-          {/* Email Link Authentication */}
-          <div className="w-full text-center mt-6 mb-2">
-            <div className="relative flex items-center justify-center">
-              <div className="border-t border-gray-700 w-full"></div>
-              <span className="bg-[#1a1a1a] text-gray-500 px-2 text-sm">or</span>
-              <div className="border-t border-gray-700 w-full"></div>
-            </div>
-          </div>
-          
-          {isEmailLinkSent ? (
-            <div className="mt-4 p-4 bg-gray-800 rounded text-center">
-              <p className="text-green-400 mb-2">✓ Link sent!</p>
-              <p className="text-sm text-gray-300">
-                Check your inbox at <span className="font-medium">{email}</span>
-              </p>
-              <p className="text-xs text-gray-400 mt-2">
-                Can&apos;t find it? Check your spam folder or{" "}
-                <button 
-                  className="text-blue-400 hover:text-blue-300"
-                  onClick={() => setIsEmailLinkSent(false)}
-                >
-                  try again
-                </button>
-              </p>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={handleEmailLinkLogin}
-              disabled={isEmailLinkLoading || !email}
-              className="w-full py-3 px-4 bg-[#135feb] hover:bg-[#1354d1] disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors duration-200 rounded-lg border border-solid border-[#2B3040] mt-4"
-            >
-              {isEmailLinkLoading ? (
-                <ScaleLoader
-                  color="#ffffff"
-                  loading={true}
-                  cssOverride={spinnerOverride}
-                  height={15}
-                  width={3}
-                  radius={1}
-                  margin={2}
-                />
-              ) : (
-                "Send me a login link"
-              )}
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={handleGoogleLogin}
+            disabled={isGoogleLoading}
+            className="flex items-center justify-center gap-2 w-full py-3 px-4 bg-[#2B3040] hover:bg-[#343b52] transition-colors duration-200 rounded-lg border border-solid border-[#374151]"
+          >
+            {isGoogleLoading ? (
+              <ScaleLoader
+                color="#ffffff"
+                loading={true}
+                cssOverride={spinnerOverride}
+                height={15}
+                width={3}
+                radius={1}
+                margin={2}
+              />
+            ) : (
+              <>
+                <Image alt="Google" src={google} width={20} height={20} />
+                <span>Continue with Google</span>
+              </>
+            )}
+          </button>
 
           {/* Sign-up Link */}
           <div className="text-center text-sm text-gray-400 mt-2">
@@ -497,32 +336,12 @@ export default function LoginPage() {
               className="text-purple-400 hover:text-blue-300"
               disabled={isResetLoading}
             >
-              {isResetLoading ? "Sending..." : "Reset Password"}
+              {isResetLoading ? "Sending..." : "Reset password"}
             </button>
           </div>
         </form>
-
-        {/* Footer Terms */}
-        <div className="text-md text-gray-400 text-center">
-          <Link href="#" className="hover:underline">
-            Terms of Service
-          </Link>{" "}
-          and{" "}
-          <Link href="#" className="hover:underline">
-            Privacy Policy
-          </Link>
-        </div>
+        <Toaster position="top-center" />
       </div>
-      <Toaster 
-        position="top-center"
-        toastOptions={{
-          duration: 3000,
-          style: {
-            background: '#333',
-            color: '#fff',
-          },
-        }}
-      />
     </>
-  );
+  )
 }

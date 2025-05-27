@@ -91,17 +91,16 @@ export default function StudioPage() {
   return (
     <div className="bg-black text-white min-h-screen overflow-hidden">
       <Navbar />
-      <div className="flex h-[calc(100vh-60px)] pt-12 overflow-hidden">
+
+      {/* explorer seciton */}
+      <div className="flex h-[calc(100vh-60px)] overflow-hidden">
         {/* Left Panel - File Structure */}
         <div 
           className="bg-[#1a1a1a] border-r border-gray-800 flex flex-col overflow-hidden"
           style={{ width: `${leftWidth}%` }}
         >
-          <div className="px-4 py-3 border-b border-gray-800 flex justify-between items-center">
-            <h2 className="text-lg font-semibold text-gray-300">File Structure</h2>
-            <div className="text-xs bg-blue-600 px-2 py-1 rounded text-white">
-              WebContainer Enabled
-            </div>
+          <div className="px-4 py-3 flex justify-between items-center" style={{background: '#1a1a1a', color: '#fff', fontWeight: 'bold', fontSize: '1.125rem', height: '52px', borderBottom: 'none'}}>
+            <h2 className="text-lg font-semibold text-white">Explorer</h2>
           </div>
           <div className="flex-1 overflow-auto p-4">
             <FileTree 
@@ -137,13 +136,9 @@ export default function StudioPage() {
 
         {/* Center Panel - Live Preview */}
         <div 
-          className="p-6 overflow-hidden bg-[#2a2a2a]"
           style={{ width: `${100 - leftWidth - rightWidth}%` }}
         >
-          <h2 className="text-lg font-semibold mb-4 text-gray-300">Live Preview</h2>
-          <div className="h-full bg-white rounded overflow-hidden">
-            <LivePreview generatedCode={generatedCode} projectFiles={projectFiles} />
-          </div>
+          <LivePreview generatedCode={generatedCode} projectFiles={projectFiles} />
         </div>
 
         {/* Resize Handle 2 */}
@@ -175,7 +170,9 @@ export default function StudioPage() {
           className="bg-[#1a1a1a] p-6 overflow-hidden border-l border-gray-800"
           style={{ width: `${rightWidth}%` }}
         >
-          <h2 className="text-lg font-semibold mb-4 text-gray-300">Test Results</h2>
+          <div className="px-4 py-3 flex items-center" style={{background: '#1a1a1a', color: '#fff', fontWeight: 'bold', fontSize: '1.125rem', height: '52px', borderBottom: 'none'}}>
+            <h2 className="text-lg font-semibold text-white m-0">Test Results</h2>
+          </div>
           <div className="h-full overflow-auto">
             <TestResults testResults={testResults} />
           </div>

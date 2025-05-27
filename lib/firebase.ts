@@ -37,26 +37,8 @@ const auth = getAuth(app);
 
 // Configure auth to use the correct auth domain
 if (typeof window !== 'undefined') {
-  // Ensure we're using the correct auth domain
+  // Always use the configured auth domain from Firebase
   auth.config.authDomain = firebaseConfig.authDomain;
-  
-  // Special handling for localhost
-  if (window.location.hostname === 'localhost') {
-    console.log("Detected localhost environment - applying special configuration");
-    
-    // For localhost, we need to use the authDomain from Firebase console
-    // but also ensure cookies work correctly
-    document.cookie = "firebase-session-test=1; SameSite=None; Secure";
-    
-    // Some browsers need extra help with localhost
-    if (window.location.protocol !== 'https:') {
-      console.warn("Using Firebase Auth with http: instead of https: can cause issues with cookies");
-    }
-  }
-  
-  // Force compatibility with localhost
-  const currentUrl = new URL(window.location.href);
-  console.log("Current URL for auth:", currentUrl.toString());
   
   // Set proper persistence
   setPersistence(auth, browserSessionPersistence)
@@ -93,37 +75,27 @@ const registerWithEmail = (email: string, password: string) =>
 const loginWithEmail = (email: string, password: string) =>
   signInWithEmailAndPassword(auth, email, password);
 
-// Sign in with Google - for login page (redirect only)
+// Sign in with Google
 const signInWithGoogle = async () => {
   try {
-    console.log("Starting Google sign-in process (redirect)");
+    // Configure provider with standard parameters
+    googleProvider.setCustomParameters({
+      prompt: 'select_account'
+    });
     
-    // Configure redirect properly
-    if (typeof window !== 'undefined') {
-      // Store the current URL as a state parameter to return to after auth
-      const currentUrl = window.location.href;
-      localStorage.setItem('authRedirectUrl', currentUrl);
-      console.log("Stored redirect URL:", currentUrl);
-      
-      // Configure provider with proper parameters
-      googleProvider.setCustomParameters({
-        prompt: 'select_account',
-        // Add login_hint if available
-        login_hint: localStorage.getItem('lastEmail') || '',
-        // This helps with localhost development
-        hd: '*'
-      });
-      
-      // Clear any pending redirect operations to avoid conflicts
-      await auth._initializationPromise;
-      console.log("Auth initialization complete, proceeding with redirect");
+    // Use popup authentication which works consistently
+    const result = await signInWithPopup(auth, googleProvider);
+    
+    // Store email for future hints if available
+    if (result.user.email) {
+      localStorage.setItem('lastEmail', result.user.email);
     }
     
-    // Always use redirect method for better mobile experience
-    await signInWithRedirect(auth, googleProvider);
-    return null; // Page will reload after redirect
-  } catch (error: any) {
-    console.error("Google sign-in redirect error:", error);
+    // Return result with isNewUser flag
+    const isNewUser = result.user.metadata.creationTime === result.user.metadata.lastSignInTime;
+    return { user: result.user, isNewUser };
+  } catch (error) {
+    console.error("Google sign-in error:", error);
     throw error;
   }
 };
@@ -135,6 +107,8 @@ const handleRedirectResult = async () => {
   try {
     console.log("Checking for Google redirect result...");
     console.log("Current URL:", window.location.href);
+    console.log("Auth domain being used:", auth.config.authDomain);
+    console.log("Provider ID:", googleProvider.providerId);
     
     // First check if we already have a user
     if (auth.currentUser) {
@@ -149,30 +123,42 @@ const handleRedirectResult = async () => {
 
     // Try to get redirect result
     console.log("No current user, checking redirect result...");
-    const result = await getRedirectResult(auth);
     
-    if (result && result.user) {
-      console.log("Successfully got Google redirect result:", result.user.email);
+    try {
+      const result = await getRedirectResult(auth);
       
-      // Store email for future hints
-      if (result.user.email) {
-        localStorage.setItem('lastEmail', result.user.email);
+      if (result && result.user) {
+        console.log("Successfully got Google redirect result:", result.user.email);
+        
+        // Store email for future hints
+        if (result.user.email) {
+          localStorage.setItem('lastEmail', result.user.email);
+        }
+        
+        // Determine if this was a sign-up or sign-in based on user metadata
+        const isNewUser = result.user.metadata.creationTime === result.user.metadata.lastSignInTime;
+        
+        return { user: result.user, isNewUser };
+      } else {
+        console.log("No redirect result found");
       }
-      
-      // Determine if this was a sign-up or sign-in based on user metadata
-      const isNewUser = result.user.metadata.creationTime === result.user.metadata.lastSignInTime;
-      
-      // Check if we need to redirect back to the original URL
-      const redirectUrl = localStorage.getItem('authRedirectUrl');
-      if (redirectUrl) {
-        console.log("Found stored redirect URL:", redirectUrl);
-        // Clear it so we don't redirect again
-        localStorage.removeItem('authRedirectUrl');
+    } catch (redirectError: any) {
+      console.error("Error processing redirect result:", redirectError);
+      // Check if we have a pendingToken error, which can happen with third-party auth
+      if (redirectError.code === 'auth/credential-already-in-use') {
+        console.log("Credential already in use, attempting to recover...");
+        try {
+          // Try to recover by signing in with the existing credential
+          if (redirectError.credential) {
+            const recoveryResult = await signInWithCredential(auth, redirectError.credential);
+            console.log("Recovery successful:", recoveryResult.user.email);
+            return { user: recoveryResult.user, isNewUser: false };
+          }
+        } catch (recoveryError) {
+          console.error("Recovery failed:", recoveryError);
+        }
       }
-      
-      return { user: result.user, isNewUser };
-    } else {
-      console.log("No redirect result found");
+      throw redirectError;
     }
     
     return null;
@@ -182,10 +168,9 @@ const handleRedirectResult = async () => {
   }
 };
 
-// Sign up with Google - for signup page (redirect only)
+// Sign up with Google - for signup page
 const signUpWithGoogle = async () => {
-  // Use the same redirect method for both login and signup
-  // The difference will be detected in handleRedirectResult
+  // Use the same logic as signInWithGoogle
   return signInWithGoogle();
 };
 

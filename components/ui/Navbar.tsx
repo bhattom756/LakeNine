@@ -37,7 +37,7 @@ const Navbar = () => {
 
   return (
     <>
-    <header className="sticky top-0 z-50 flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#282e39]/70 bg-[#111318]/80 px-6 sm:px-10 py-4 backdrop-blur-md">
+    <header className="sticky top-0 z-50 flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#282e39]/70 bg-[#111318]/80 px-6 sm:px-10 py-2 backdrop-blur-md">
       <div className="flex items-center gap-3">
         <div className="size-6 text-[#135feb]">
           <svg fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">

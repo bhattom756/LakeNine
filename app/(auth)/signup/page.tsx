@@ -1,9 +1,8 @@
 "use client";
 import { useState, useEffect, CSSProperties } from "react";
-import { registerWithEmail, loginWithEmail, signUpWithGoogle, handleRedirectResult, verifyAuthConfig } from "@/lib/firebase";
+import { registerWithEmail, signUpWithGoogle, handleRedirectResult, verifyAuthConfig } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import LoginLogo from "@/public/loginLogo.png";
 import google from "@/public/google.png";
 import Image from "next/image";
 import toast, { Toaster } from 'react-hot-toast';
@@ -30,7 +29,6 @@ export default function SignupPage() {
 
   // Check for redirect results on initial load
   useEffect(() => {
-    // Add a console log to track when the effect runs
     console.log("Signup page loaded, checking for redirect results");
     
     const checkRedirect = async () => {
@@ -47,9 +45,14 @@ export default function SignupPage() {
           } else {
             toast.success("Signed in with existing Google account!");
           }
+          
+          // Get the stored redirect path or default to home page
+          const redirectPath = localStorage.getItem('authRedirectPath') || '/';
+          localStorage.removeItem('authRedirectPath'); // Clear it
+          
           // Add a delay before redirecting to ensure the toast is shown
           setTimeout(() => {
-            router.push("/");
+            router.push(redirectPath);
           }, 500);
         } else {
           console.log("No redirect result found");
@@ -162,15 +165,32 @@ export default function SignupPage() {
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
     try {
-      console.log("Starting Google sign-up redirect");
-      // This will trigger a redirect - the page will reload
-      await signUpWithGoogle();
-      // The code below won't execute since the page will reload
+      // Use Google popup authentication
+      const result = await signUpWithGoogle();
+      if (result?.user) {
+        if (result.isNewUser) {
+          toast.success("Account created with Google successfully!");
+        } else {
+          toast.success("Signed in with existing Google account!");
+        }
+        router.push("/");
+      }
     } catch (err: any) {
-      setIsGoogleLoading(false);
-      const errorMessage = "Failed to start Google sign-up. Please try again.";
+      let errorMessage = "Google sign-up failed. Please try again.";
+      
+      if (err.code === "auth/popup-closed-by-user") {
+        errorMessage = "Sign-up was cancelled. Please try again.";
+      } else if (err.code === "auth/popup-blocked") {
+        errorMessage = "Pop-up was blocked. Please allow pop-ups for this site.";
+      } else if (err.code === "auth/cancelled-popup-request") {
+        errorMessage = "Sign-up was cancelled. Please try again.";
+      } else if (err.code === "auth/network-request-failed") {
+        errorMessage = "Network error. Please check your internet connection.";
+      }
+      
       toast.error(errorMessage);
-      console.error("Google sign-up redirect initiation error:", err);
+    } finally {
+      setIsGoogleLoading(false);
     }
   };
 
@@ -266,13 +286,25 @@ export default function SignupPage() {
           <button
             type="button"
             onClick={handleGoogleLogin}
-            className="w-full flex items-center justify-center gap-2 border border-gray-600 text-white py-2 rounded-md hover:bg-gray-700 transition-colors min-h-[40px]"
+            className="flex items-center justify-center gap-2 w-full py-3 px-4 bg-[#2B3040] hover:bg-[#343b52] transition-colors duration-200 rounded-lg border border-solid border-[#374151]"
             disabled={isLoading || isGoogleLoading}
           >
-            <span className="text-lg">
-              <Image src={google} height={30} width={30} alt="google-signup" />
-            </span>
-            Sign up with Google
+            {isGoogleLoading ? (
+              <ScaleLoader
+                color="#ffffff"
+                loading={true}
+                cssOverride={spinnerOverride}
+                height={15}
+                width={3}
+                radius={1}
+                margin={2}
+              />
+            ) : (
+              <>
+                <Image src={google} height={20} width={20} alt="google-signup" />
+                <span>Continue with Google</span>
+              </>
+            )}
           </button>
 
           {/* Login Redirect */}
@@ -283,26 +315,8 @@ export default function SignupPage() {
             </Link>
           </div>
         </form>
-
-        <div className="text-md text-gray-400 text-center">
-          <p>By creating an account, you agree to the</p>
-          <p>
-            <Link href="#" className="hover:underline">Terms of Service</Link> and{' '}
-            <Link href="#" className="hover:underline">Privacy Policy</Link>
-          </p>
-        </div>
-
+        <Toaster position="top-center" />
       </div>
-      <Toaster
-        position="top-center"
-        toastOptions={{
-          duration: 3000,
-          style: {
-            background: '#333',
-            color: '#fff',
-          },
-        }}
-      />
     </>
   );
 }
