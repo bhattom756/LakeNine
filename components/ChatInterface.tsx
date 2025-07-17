@@ -18,19 +18,31 @@ interface Message {
   content: string;
 }
 
-// Update the generateProjectWithAI function to include RAG-specific messaging
+// Update the generateProjectWithAI function with timeout and error handling
 async function generateProjectWithAI(userPrompt: string) {
   try {
-    // Call the backend API to generate the project (now using RAG)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+    
+    // Call the backend API to generate the project
     const response = await fetch('/api/genCode', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: userPrompt }),
+      body: JSON.stringify({ 
+        prompt: `Create a modern React + Vite project with Tailwind CSS. ${userPrompt}. 
+        IMPORTANT: Generate ONLY React components (.jsx files), CSS files, and package.json. 
+        Do NOT generate plain HTML files. Use React functional components with hooks.
+        Include proper file structure for a Vite React project: src/ folder with components, 
+        main.jsx, App.jsx, and index.css.` 
+      }),
+      signal: controller.signal
     });
     
+    clearTimeout(timeoutId);
+    
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to generate project');
+      const errorData = await response.json().catch(() => ({ error: 'Network error' }));
+      throw new Error(errorData.error || `HTTP ${response.status}: Failed to generate project`);
     }
     
     const data = await response.json();
@@ -40,7 +52,13 @@ async function generateProjectWithAI(userPrompt: string) {
     };
   } catch (error) {
     console.error('Error in generateProjectWithAI:', error);
-    throw error;
+    if (error instanceof Error) {
+      if (error.name === 'AbortError') {
+        throw new Error('Request timed out. Please try again with a shorter prompt.');
+      }
+      throw error;
+    }
+    throw new Error('Unknown error occurred');
   }
 }
 
@@ -75,265 +93,312 @@ export default function ChatInterface({
   const handleSend = async () => {
     if (!input.trim() || isGenerating) return;
     
-    // Add user message
     const userMessage: Message = { role: "user", content: input };
     setMessages((prev) => [...prev, userMessage]);
+    const currentInput = input;
     setInput("");
     setIsGenerating(true);
     
-    // Add initial assistant message
+    // Add initial assistant message with immediate UI feedback
     setMessages((prev) => [
       ...prev,
-      { role: "assistant", content: "I'll create a project based on your request using my knowledge base of high-quality components. Let me think about the best approach..." },
+      { role: "assistant", content: "🚀 Starting React + Vite project generation..." },
     ]);
     
-    // Determine website type and framework from input
-    const lowerInput = input.toLowerCase();
-    
-    // Better detection of technologies
-    const isBasicWeb = lowerInput.includes('html') && lowerInput.includes('css') && 
-                       (lowerInput.includes('js') || lowerInput.includes('javascript')) ||
-                       !lowerInput.includes('react') && !lowerInput.includes('next') && 
-                       !lowerInput.includes('vue') && !lowerInput.includes('angular');
-    
-    const websiteType = lowerInput.includes('gym') ? 'Gym/Fitness' : 
-                       lowerInput.includes('hospital') ? 'Healthcare' :
-                       lowerInput.includes('restaurant') ? 'Restaurant' :
-                       lowerInput.includes('portfolio') ? 'Portfolio' : 'Generic';
-    
     try {
-      // Continue with actual API call while thinking is displayed
-      const aiResponse = await generateProjectWithAI(userMessage.content);
+      // Add progress updates
+      setTimeout(() => {
+        setMessages((prev) => [
+          ...prev.slice(0, -1),
+          { role: "assistant", content: "🔍 Analyzing your requirements..." },
+        ]);
+      }, 500);
+      
+      setTimeout(() => {
+        setMessages((prev) => [
+          ...prev.slice(0, -1),
+          { role: "assistant", content: "⚛️ Generating React components..." },
+        ]);
+      }, 2000);
+      
+      // Call API with enhanced error handling
+      const aiResponse = await generateProjectWithAI(currentInput);
       setAiPlan(aiResponse.plan);
       
-      // Process files to ensure they're WebContainer-ready
-      const processedFiles = prepareFilesForWebContainer(aiResponse.files, websiteType);
+      // Process files to ensure they're React/Vite ready
+      const processedFiles = prepareFilesForReactVite(aiResponse.files);
       setProjectFiles(processedFiles);
       
-      // Update file structure in UI based on actual files
-      let allFiles: string[] = [];
+      // Set proper React/Vite file structure
+      const reactFileStructure = [
+        "package.json",
+        "vite.config.js", 
+        "index.html",
+        "src/",
+        "src/main.jsx",
+        "src/App.jsx",
+        "src/App.css",
+        "src/index.css",
+        "src/components/",
+        "public/",
+        "public/vite.svg",
+        ".gitignore",
+        "README.md"
+      ];
       
-      // Only add React-specific files if we're actually using React
-      if (websiteType === 'React' || websiteType === 'Next.js') {
-        allFiles = [
-          "package.json", 
-          "README.md",
-          "node_modules/",
-          "public/",
-          "src/",
-          ".gitignore",
-        ];
-      } else {
-        // For HTML/CSS/JS, start with simpler structure
-        allFiles = [
-          "index.html",
-          "css/",
-          "css/styles.css",
-          "js/",
-          "js/script.js",
-          "README.md",
-          "images/",
-        ];
-      }
-      
-      // Add files from AI response
+      // Add generated files to structure
       Object.keys(processedFiles).forEach(path => {
-        if (!allFiles.includes(path)) {
-          allFiles.push(path);
+        if (!reactFileStructure.includes(path)) {
+          reactFileStructure.push(path);
         }
       });
       
-      setFileStructure(allFiles);
+      setFileStructure(reactFileStructure);
       
-      // For the code preview, show HTML file if it's HTML/CSS/JS
-      if (isBasicWeb) {
-        if (processedFiles['index.html']) {
-          setGeneratedCode(processedFiles['index.html']);
-        } else if (processedFiles['css/styles.css']) {
-          setGeneratedCode(processedFiles['css/styles.css']);
-        }
-      } else {
-        // For React, show App.js or index.js
-        if (processedFiles['src/App.js']) {
-          setGeneratedCode(processedFiles['src/App.js']);
-        } else if (processedFiles['src/index.js']) {
-          setGeneratedCode(processedFiles['src/index.js']);
-        }
+      // Set the main App component for preview
+      if (processedFiles['src/App.jsx']) {
+        setGeneratedCode(processedFiles['src/App.jsx']);
+      } else if (processedFiles['src/main.jsx']) {
+        setGeneratedCode(processedFiles['src/main.jsx']);
       }
       
       setTestResults([
-        "✅ Project structure created successfully",
-        `✅ All files generated with ${isBasicWeb ? 'HTML/CSS/JS' : websiteType}`,
-        "✅ Development server running in WebContainer",
-        "✅ Code quality verified",
-        "✅ Responsive design implemented",
-        "✅ RAG-enhanced components integrated"
+        "✅ React + Vite project structure created",
+        "✅ Modern React components generated", 
+        "✅ Tailwind CSS integration configured",
+        "✅ Development server ready",
+        "✅ Hot module replacement enabled",
+        "✅ All files optimized for WebContainer"
       ]);
       
-      // Send the plan as a separate message
+      // Success message
       setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: `**Project Plan**\n\nI've created a structured plan for your ${websiteType} website using my knowledge base of high-quality components.` },
+        ...prev.slice(0, -1),
+        { role: "assistant", content: "🎉 **Project Generated Successfully!**\n\nYour React + Vite project is ready! I've created:\n\n• Modern React components with JSX\n• Tailwind CSS styling\n• Proper Vite configuration\n• Development-ready file structure\n\nYou can now see the live preview and explore all files in the file explorer." },
       ]);
       
-      // Send message about files - more concise now
+    } catch (error) {
+      console.error('Error generating project:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      
       setMessages((prev) => [
-        ...prev,
+        ...prev.slice(0, -1),
         { 
           role: "assistant", 
-          content: `**Files Created**\n\nYour ${websiteType} website has been successfully generated with ${websiteType} and is now running in WebContainer. You can preview the live site and explore the files in the file explorer.` 
+          content: `❌ **Error**: ${errorMessage}\n\nPlease try:\n• Refreshing the page\n• Using a shorter, simpler prompt\n• Checking your internet connection\n\nIf the issue persists, the AI service might be temporarily unavailable.` 
         },
       ]);
       
-      // Finished generating
-      setIsGenerating(false);
-    } catch (error) {
-      console.error('Error generating project:', error);
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "I'm sorry, but there was an error generating your project. Please try again with a different request." },
+      setTestResults([
+        "❌ Project generation failed",
+        `❌ Error: ${errorMessage}`,
+        "💡 Try again with a simpler prompt"
       ]);
+    } finally {
       setIsGenerating(false);
     }
   };
 
-  // New function to prepare files for WebContainer
-  function prepareFilesForWebContainer(files: Record<string, string>, framework: string): Record<string, string> {
-    const processedFiles = { ...files };
+  // New function to prepare files specifically for React/Vite
+  function prepareFilesForReactVite(files: Record<string, string>): Record<string, string> {
+    const processedFiles: Record<string, string> = {};
     
-    // Ensure package.json exists for Node.js-based frameworks
-    if ((framework === 'React' || framework === 'Next.js' || framework.includes('Vue') || framework.includes('Angular')) 
-        && !processedFiles['package.json']) {
-        
-      if (framework === 'React') {
-        processedFiles['package.json'] = JSON.stringify({
-          name: "react-app",
-          version: "1.0.0",
-          private: true,
-          scripts: {
-            "dev": "vite",
-            "build": "vite build",
-            "preview": "vite preview"
-          },
-          dependencies: {
-            "react": "^18.2.0",
-            "react-dom": "^18.2.0",
-            "react-awesome-reveal": "^4.2.3",
-            "tailwindcss": "^3.3.2"
-          },
-          devDependencies: {
-            "@vitejs/plugin-react": "^4.0.0",
-            "vite": "^4.3.9"
-          }
-        }, null, 2);
-        
-        // Add vite config if not present
-        if (!processedFiles['vite.config.js']) {
-          processedFiles['vite.config.js'] = `
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
+    // Ensure we have all required React/Vite files
+    const requiredFiles = {
+      'package.json': `{
+  "name": "react-vite-project",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.43",
+    "@types/react-dom": "^18.2.17",
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.16",
+    "eslint": "^8.55.0",
+    "eslint-plugin-react": "^7.33.2",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.5",
+    "postcss": "^8.4.32",
+    "tailwindcss": "^3.4.0",
+    "vite": "^5.0.8"
+  }
+}`,
+      'vite.config.js': `import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
   server: {
-    hmr: true,
-  },
-});`;
-        }
-      } else if (framework === 'Next.js') {
-        processedFiles['package.json'] = JSON.stringify({
-          name: "nextjs-app",
-          version: "1.0.0",
-          private: true,
-          scripts: {
-            "dev": "next dev",
-            "build": "next build",
-            "start": "next start"
-          },
-          dependencies: {
-            "next": "^13.4.0",
-            "react": "^18.2.0",
-            "react-dom": "^18.2.0",
-            "react-awesome-reveal": "^4.2.3",
-            "tailwindcss": "^3.3.2"
-          },
-          devDependencies: {
-            "autoprefixer": "^10.4.14",
-            "postcss": "^8.4.23"
-          }
-        }, null, 2);
-      } else if (framework.includes('Vue')) {
-        processedFiles['package.json'] = JSON.stringify({
-          name: "vue-app",
-          version: "1.0.0",
-          private: true,
-          scripts: {
-            "dev": "vite",
-            "build": "vite build",
-            "preview": "vite preview"
-          },
-          dependencies: {
-            "vue": "^3.3.4",
-            "tailwindcss": "^3.3.2"
-          },
-          devDependencies: {
-            "@vitejs/plugin-vue": "^4.1.0",
-            "vite": "^4.3.9"
-          }
-        }, null, 2);
-      }
-    }
-    
-    // Check if index.html exists for Vite-based projects
-    if ((framework === 'React' || framework.includes('Vue')) && !processedFiles['index.html']) {
-      if (framework === 'React') {
-        processedFiles['index.html'] = `
-<!DOCTYPE html>
+    port: 3000,
+    host: true
+  }
+})`,
+      'index.html': `<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>React App</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>React + Vite App</title>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
-</html>`;
-
-        // Add src/main.jsx if it doesn't exist
-        if (!processedFiles['src/main.jsx']) {
-          processedFiles['src/main.jsx'] = `
-import React from 'react'
+</html>`,
+      'src/main.jsx': `import React from 'react'
 import ReactDOM from 'react-dom/client'
-import App from './App'
+import App from './App.jsx'
+import './index.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <App />
-  </React.StrictMode>
-)`;
+  </React.StrictMode>,
+)`,
+      'src/index.css': `@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: light dark;
+  background-color: #ffffff;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}`,
+      'tailwind.config.js': `/** @type {import('tailwindcss').Config} */
+export default {
+  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
+  ],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+}`,
+      'postcss.config.js': `export default {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+}`,
+      '.gitignore': `# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?`,
+      'README.md': `# React + Vite Project
+
+This project was generated by LakeNine Studio AI.
+
+## Getting Started
+
+\`\`\`bash
+npm install
+npm run dev
+\`\`\`
+
+## Features
+
+- ⚛️ React 18
+- ⚡ Vite
+- 🎨 Tailwind CSS
+- 🔥 Hot Module Replacement
+- 📦 Modern build tooling
+
+## Scripts
+
+- \`npm run dev\` - Start development server
+- \`npm run build\` - Build for production
+- \`npm run preview\` - Preview production build
+`
+    };
+
+    // Add required files first
+    Object.entries(requiredFiles).forEach(([path, content]) => {
+      processedFiles[path] = content;
+    });
+    
+    // Process AI-generated files
+    Object.entries(files).forEach(([path, content]) => {
+      if (typeof content === 'string') {
+        // Convert any HTML files to JSX components
+        if (path.endsWith('.html') && path !== 'index.html') {
+          const componentName = path.split('/').pop()?.replace('.html', '') || 'Component';
+          const jsxPath = `src/components/${componentName}.jsx`;
+          processedFiles[jsxPath] = convertHtmlToJsx(content, componentName);
         }
-      } else if (framework.includes('Vue')) {
-        processedFiles['index.html'] = `
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vue App</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-  </head>
-  <body>
-    <div id="app"></div>
-    <script type="module" src="/src/main.js"></script>
-  </body>
-</html>`;
+        // Keep JSX, CSS, JS files as they are
+        else if (path.endsWith('.jsx') || path.endsWith('.css') || path.endsWith('.js') || path.endsWith('.json')) {
+          processedFiles[path] = content;
+        }
+        // Convert any plain JS to JSX if it looks like a React component
+        else if (path.endsWith('.js') && content.includes('React')) {
+          const jsxPath = path.replace('.js', '.jsx');
+          processedFiles[jsxPath] = content;
+        }
       }
-    }
+    });
     
     return processedFiles;
+  }
+
+  // Helper function to convert HTML to JSX component
+  function convertHtmlToJsx(htmlContent: string, componentName: string): string {
+    // Basic HTML to JSX conversion
+    let jsx = htmlContent
+      .replace(/class=/g, 'className=')
+      .replace(/for=/g, 'htmlFor=')
+      .replace(/<!--[\s\S]*?-->/g, '')
+      .replace(/<(\w+)([^>]*?)\/>/g, '<$1$2></$1>');
+    
+    return `import React from 'react';
+
+export default function ${componentName}() {
+  return (
+    <div className="min-h-screen">
+      ${jsx}
+    </div>
+  );
+}`;
   }
 
   if (!isOpen) return null;
@@ -353,7 +418,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
               </div>
               <div>
                 <h2 className="text-xl font-semibold text-white">AI Assistant</h2>
-                <p className="text-sm text-gray-300">Build anything with AI</p>
+                <p className="text-sm text-gray-300">Build React + Vite projects with AI</p>
               </div>
             </div>
             <button
@@ -366,7 +431,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         </div>
 
         {/* Messages area with custom scrollbar */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 relative z-10" style={{
+        <div className="flex-1 overflow-y-auto p-6 space-y-4" style={{
           scrollbarWidth: 'thin',
           scrollbarColor: 'rgba(255,255,255,0.3) transparent'
         }}>
@@ -375,8 +440,8 @@ ReactDOM.createRoot(document.getElementById('root')).render(
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-600/20 border border-white/20 flex items-center justify-center mb-4">
                 <Sparkles className="w-8 h-8 text-blue-400" />
               </div>
-              <h3 className="text-xl font-semibold text-white mb-2">Ready to build something amazing?</h3>
-              <p className="text-gray-400 max-w-md">Describe your project and I'll generate a complete application with live preview, code, and everything you need.</p>
+              <h3 className="text-xl font-semibold text-white mb-2">Ready to build a React app?</h3>
+              <p className="text-gray-400 max-w-md">Describe your project and I'll generate a complete React + Vite application with modern components, Tailwind CSS, and everything you need.</p>
             </div>
           )}
           
@@ -395,6 +460,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
                     <span className="text-sm text-gray-400">AI Assistant</span>
                   </div>
                 )}
+                
                 <div className={`rounded-2xl p-4 backdrop-blur-sm border ${
                   message.role === "user"
                     ? "bg-gradient-to-br from-blue-500/20 to-purple-600/20 border-blue-500/30 text-white"
@@ -438,7 +504,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
                       <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse delay-75" />
                       <div className="w-2 h-2 bg-pink-400 rounded-full animate-pulse delay-150" />
                     </div>
-                    <span className="text-gray-300 text-sm">Generating your project...</span>
+                    <span className="text-gray-300 text-sm">Generating your React project...</span>
                   </div>
                 </div>
               </div>
@@ -456,8 +522,12 @@ ReactDOM.createRoot(document.getElementById('root')).render(
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
-                placeholder="Describe what you want to build..."
+                onKeyPress={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey && !isGenerating) {
+                    handleSend();
+                  }
+                }}
+                placeholder="Describe your React app (e.g., 'portfolio website with dark theme')..."
                 disabled={isGenerating}
                 className="w-full px-4 py-3 pr-12 rounded-2xl bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 backdrop-blur-sm transition-all duration-200 disabled:opacity-50"
               />
