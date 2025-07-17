@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { fetchPexelsImages } from '@/lib/pexels';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, Sparkles, Send, X } from 'lucide-react';
 
 interface ChatInterfaceProps {
   isOpen: boolean;
@@ -57,9 +57,23 @@ export default function ChatInterface({
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiPlan, setAiPlan] = useState("");
   const [loading, setLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // Focus input when chat opens
+  useEffect(() => {
+    if (isOpen && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [isOpen]);
 
   const handleSend = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() || isGenerating) return;
     
     // Add user message
     const userMessage: Message = { role: "user", content: input };
@@ -325,106 +339,138 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
-      <div className="bg-[#121212] w-full max-w-2xl h-[85vh] rounded-xl flex flex-col border border-gray-700 shadow-xl">
-        {/* Header */}
-        <div className="p-4 border-b border-gray-800 flex justify-between items-center bg-gradient-to-r from-[#1e3a8a] to-[#1e1e3a]">
-          <h2 className="text-xl font-semibold text-white flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-6 h-6 mr-2">
-              <path d="M12 16c2.206 0 4-1.794 4-4s-1.794-4-4-4-4 1.794-4 4 1.794 4 4 4z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M21 12c0 1.657-4.03 3-9 3s-9-1.343-9-3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M3 5v14c0 1.657 4.03 3 9 3s9-1.343 9-3V5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            AI Assistant
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-gray-300 hover:text-white transition-colors rounded-full p-1 hover:bg-gray-800"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="premium-glass w-full max-w-4xl h-[90vh] rounded-3xl flex flex-col overflow-hidden shadow-2xl border border-white/10">
+        {/* Animated gradient background overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-purple-500/5 to-pink-500/5 opacity-50" />
+        
+        {/* Header with glassmorphism */}
+        <div className="relative z-10 p-6 border-b border-white/10 bg-white/5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
+                <Sparkles className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold text-white">AI Assistant</h2>
+                <p className="text-sm text-gray-300">Build anything with AI</p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 flex items-center justify-center transition-all duration-200 group"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
+              <X className="w-5 h-5 text-gray-300 group-hover:text-white transition-colors" />
+            </button>
+          </div>
         </div>
 
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#1a1a1a]">
+        {/* Messages area with custom scrollbar */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 relative z-10" style={{
+          scrollbarWidth: 'thin',
+          scrollbarColor: 'rgba(255,255,255,0.3) transparent'
+        }}>
+          {messages.length === 0 && (
+            <div className="flex flex-col items-center justify-center h-full text-center">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-600/20 border border-white/20 flex items-center justify-center mb-4">
+                <Sparkles className="w-8 h-8 text-blue-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-2">Ready to build something amazing?</h3>
+              <p className="text-gray-400 max-w-md">Describe your project and I'll generate a complete application with live preview, code, and everything you need.</p>
+            </div>
+          )}
+          
           {messages.map((message, index) => (
-            <div key={index} className={`${
-              message.role === "user" 
-                ? "flex justify-end" 
-                : "flex justify-start"
-            }`}>
-              <div
-                className={`max-w-[80%] rounded-lg p-4 ${
+            <div key={index} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
+              <div className={`max-w-[80%] relative ${
+                message.role === "user" 
+                  ? "ml-auto" 
+                  : "mr-auto"
+              }`}>
+                {message.role === "assistant" && (
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                      <Sparkles className="w-3 h-3 text-white" />
+                    </div>
+                    <span className="text-sm text-gray-400">AI Assistant</span>
+                  </div>
+                )}
+                <div className={`rounded-2xl p-4 backdrop-blur-sm border ${
                   message.role === "user"
-                    ? "bg-[#1e3a8a] text-white"
-                    : "bg-[#2a2a2a] text-gray-200 border border-gray-700"
-                }`}
-              >
-                <div className="prose prose-invert prose-sm max-w-none">
-                  {/* Parse markdown-like syntax */}
-                  {message.content.split('\n\n').map((paragraph, i) => {
-                    if (paragraph.startsWith('```')) {
-                      const codeContent = paragraph.replace(/```[a-z]*\n/, '').replace(/```$/, '');
-                      return (
-                        <pre key={i} className="bg-[#1a1a2a] p-3 rounded-md text-xs overflow-x-auto">
-                          <code>{codeContent}</code>
-                        </pre>
-                      );
-                    } else if (paragraph.startsWith('**') && paragraph.endsWith('**')) {
-                      return <h4 key={i} className="font-bold text-blue-300">{paragraph.replace(/\*\*/g, '')}</h4>;
-                    } else {
-                      return <p key={i}>{paragraph}</p>;
-                    }
-                  })}
+                    ? "bg-gradient-to-br from-blue-500/20 to-purple-600/20 border-blue-500/30 text-white"
+                    : "bg-white/5 border-white/10 text-gray-100"
+                }`}>
+                  <div className="prose prose-invert prose-sm max-w-none">
+                    {/* Parse markdown-like syntax */}
+                    {message.content.split('\n\n').map((paragraph, i) => {
+                      if (paragraph.startsWith('```')) {
+                        const codeContent = paragraph.replace(/```[a-z]*\n/, '').replace(/```$/, '');
+                        return (
+                          <pre key={i} className="bg-black/30 border border-white/10 p-3 rounded-xl text-xs overflow-x-auto mt-2">
+                            <code className="text-green-400">{codeContent}</code>
+                          </pre>
+                        );
+                      } else if (paragraph.startsWith('**') && paragraph.endsWith('**')) {
+                        return <h4 key={i} className="font-semibold text-blue-300 mb-2">{paragraph.replace(/\*\*/g, '')}</h4>;
+                      } else {
+                        return <p key={i} className="leading-relaxed">{paragraph}</p>;
+                      }
+                    })}
+                  </div>
                 </div>
               </div>
             </div>
           ))}
+          
           {isGenerating && (
             <div className="flex justify-start">
-              <div className="bg-[#2a2a2a] text-gray-300 rounded-lg p-3 border border-gray-700">
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" />
-                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce delay-100" />
-                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce delay-200" />
+              <div className="max-w-[80%]">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                    <Sparkles className="w-3 h-3 text-white" />
+                  </div>
+                  <span className="text-sm text-gray-400">AI Assistant</span>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="flex space-x-1">
+                      <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
+                      <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse delay-75" />
+                      <div className="w-2 h-2 bg-pink-400 rounded-full animate-pulse delay-150" />
+                    </div>
+                    <span className="text-gray-300 text-sm">Generating your project...</span>
+                  </div>
                 </div>
               </div>
             </div>
           )}
+          <div ref={messagesEndRef} />
         </div>
 
-        {/* Input */}
-        <div className="p-4 border-t border-gray-800 bg-[#121212]">
+        {/* Input area with glassmorphism */}
+        <div className="relative z-10 p-6 border-t border-white/10 bg-white/5">
           <div className="flex gap-3">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && handleSend()}
-              placeholder="Type your message..."
-              className="flex-1 p-3 rounded-lg bg-[#2a2a2a] border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent"
-            />
+            <div className="flex-1 relative">
+              <input
+                ref={inputRef}
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyPress={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
+                placeholder="Describe what you want to build..."
+                disabled={isGenerating}
+                className="w-full px-4 py-3 pr-12 rounded-2xl bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 backdrop-blur-sm transition-all duration-200 disabled:opacity-50"
+              />
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                <kbd className="px-2 py-1 text-xs text-gray-400 bg-white/10 border border-white/20 rounded">Enter</kbd>
+              </div>
+            </div>
             <button
               onClick={handleSend}
-              className="px-4 py-2 rounded-lg bg-[#1e3a8a] text-white hover:bg-[#1e40af] transition-colors duration-200 flex items-center"
+              disabled={!input.trim() || isGenerating}
+              className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 disabled:from-gray-600 disabled:to-gray-700 flex items-center justify-center transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed group"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
-              Send
+              <Send className="w-5 h-5 text-white group-hover:scale-110 transition-transform" />
             </button>
           </div>
         </div>

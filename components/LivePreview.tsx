@@ -26,6 +26,8 @@ export default function LivePreview({ generatedCode, projectFiles = {} }: LivePr
   const [terminalReady, setTerminalReady] = useState(false);
   const [currentUrl, setCurrentUrl] = useState<string>('');
   const [serverStarted, setServerStarted] = useState(false);
+  const shellProcessRef = useRef<any>(null);
+  const inputWriterRef = useRef<any>(null);
 
   // Initialize terminal
   useEffect(() => {
@@ -98,6 +100,26 @@ export default function LivePreview({ generatedCode, projectFiles = {} }: LivePr
     setupTerminal();
 
     return () => {
+      // Clean up shell connections first
+      if (inputWriterRef.current) {
+        try {
+          inputWriterRef.current.releaseLock();
+        } catch (error) {
+          console.warn('Error releasing input writer lock:', error);
+        }
+        inputWriterRef.current = null;
+      }
+      
+      if (shellProcessRef.current) {
+        try {
+          shellProcessRef.current.kill?.();
+        } catch (error) {
+          console.warn('Error killing shell process:', error);
+        }
+        shellProcessRef.current = null;
+      }
+      
+      // Clean up terminal
       if (terminalInstanceRef.current) {
         terminalInstanceRef.current.dispose();
         terminalInstanceRef.current = null;
@@ -118,6 +140,9 @@ export default function LivePreview({ generatedCode, projectFiles = {} }: LivePr
         rows: terminal.rows || 24,
       },
     }).then((shellProcess: any) => {
+      // Store shell process reference for cleanup
+      shellProcessRef.current = shellProcess;
+      
       // Connect the shell output to terminal
       shellProcess.output.pipeTo(
         new WritableStream({
@@ -125,16 +150,36 @@ export default function LivePreview({ generatedCode, projectFiles = {} }: LivePr
             terminal.write(data);
           },
         })
-      );
+      ).catch((error: any) => {
+        console.error('Output pipe error:', error);
+      });
 
-      // Connect terminal input to shell
+      // Get a single writer for the shell input to avoid locking issues
+      const inputWriter = shellProcess.input.getWriter();
+      inputWriterRef.current = inputWriter;
+      
+      // Connect terminal input to shell using the single writer
       terminal.onData((data: string) => {
-        shellProcess.input.getWriter().write(data);
+        if (inputWriterRef.current) {
+          inputWriterRef.current.write(data).catch((error: any) => {
+            console.error('Input write error:', error);
+          });
+        }
       });
 
       // Handle shell exit
       shellProcess.exit.then((exitCode: number) => {
+        if (inputWriterRef.current) {
+          inputWriterRef.current.releaseLock(); // Release the writer lock
+          inputWriterRef.current = null;
+        }
         terminal.write(`\r\n\x1b[33mShell exited with code ${exitCode}\x1b[0m\r\n`);
+      }).catch((error: any) => {
+        console.error('Shell exit error:', error);
+        if (inputWriterRef.current) {
+          inputWriterRef.current.releaseLock(); // Release the writer lock on error
+          inputWriterRef.current = null;
+        }
       });
 
     }).catch((error: any) => {

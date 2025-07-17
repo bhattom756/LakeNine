@@ -5,7 +5,7 @@ import SyntaxHighlighter from 'react-syntax-highlighter';
 import { atomOneDark } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 import { getFileIcon } from '@/lib/utils';
 import { Copy } from 'lucide-react';
-import { CopyToClipboard } from 'react-copy-to-clipboard';
+import { toast } from 'react-hot-toast';
 
 interface CodePreviewProps {
   code: string;
@@ -19,44 +19,40 @@ export default function CodePreview({ code, language = 'javascript', fileName = 
   const [copied, setCopied] = useState(false);
 
   // Determine language from file extension
-  const getLanguageFromCode = (code: string): string => {
-    if (!code) return 'text';
-    if (code.includes('<html') || code.includes('<!DOCTYPE html')) {
-      return 'html';
-    } else if (code.includes('body {') || code.includes('@media')) {
-      return 'css';
-    } else if (code.includes('import React') || code.includes('function(') || code.includes('() =>')) {
-      return 'javascript';
-    }
-    return language;
-  };
+  const codeLanguage = language || getLanguageFromFileName(fileName);
 
-  const codeLanguage = getLanguageFromCode(formattedCode);
+  // Get appropriate file icon
   const fileIcon = getFileIcon(fileName);
 
-  // Handle copy success
-  const handleCopySuccess = () => {
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1200);
+  // Handle copy to clipboard
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(formattedCode);
+      setCopied(true);
+      toast.success('Copied to clipboard!');
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy:', error);
+      toast.error('Failed to copy to clipboard');
+    }
   };
 
   return (
-    <div className="h-full flex flex-col bg-[#282c34] text-gray-300">
-      {/* File header with icon, name and copy button */}
+    <div className="bg-[#1a1a1a] text-white rounded-lg border border-gray-700 shadow-lg overflow-hidden h-full flex flex-col">
+      {/* Header with file info and copy button */}
       <div className="flex items-center justify-between px-4 py-2 bg-[#23272e] border-b border-gray-700 sticky top-0 z-10">
         <div className="flex items-center gap-2 font-mono text-base">
           <span className="text-xl">{fileIcon}</span>
           <span className="text-gray-200">{fileName}</span>
         </div>
-        <CopyToClipboard text={formattedCode} onCopy={handleCopySuccess}>
-          <button
-            className="flex items-center gap-1 px-2 py-1 rounded bg-gray-700 hover:bg-gray-600 text-gray-200 text-sm transition-colors relative"
-            title={copied ? 'Copied!' : 'Copy to clipboard'}
-          >
-            <Copy size={16} className="mr-1" />
-            {copied ? 'Copied!' : 'Copy'}
-          </button>
-        </CopyToClipboard>
+        <button
+          onClick={handleCopy}
+          className="flex items-center gap-1 px-2 py-1 rounded bg-gray-700 hover:bg-gray-600 text-gray-200 text-sm transition-colors relative"
+          title={copied ? 'Copied!' : 'Copy to clipboard'}
+        >
+          <Copy size={16} className="mr-1" />
+          {copied ? 'Copied!' : 'Copy'}
+        </button>
       </div>
 
       {/* Code content with improved formatting */}
@@ -66,23 +62,41 @@ export default function CodePreview({ code, language = 'javascript', fileName = 
           style={atomOneDark}
           customStyle={{
             margin: 0,
-            padding: '1rem',
-            background: '#282c34',
-            fontSize: '0.9rem',
+            padding: '16px',
+            background: 'transparent',
+            fontSize: '14px',
             lineHeight: '1.5',
-            tabSize: 2,
           }}
-          className="h-full"
-          showLineNumbers
-          wrapLines={true}
-          wrapLongLines={true}
-          lineProps={{
-            style: { wordBreak: 'break-all', whiteSpace: 'pre-wrap' }
+          showLineNumbers={true}
+          lineNumberStyle={{
+            color: '#6b7280',
+            paddingRight: '16px',
+            fontSize: '12px',
           }}
+          wrapLines={false}
+          wrapLongLines={false}
         >
-          {formattedCode || '// No code to display'}
+          {formattedCode}
         </SyntaxHighlighter>
       </div>
     </div>
   );
+}
+
+function getLanguageFromFileName(fileName: string): string {
+  const ext = fileName.split('.').pop()?.toLowerCase();
+  switch (ext) {
+    case 'js': return 'javascript';
+    case 'jsx': return 'javascript';
+    case 'ts': return 'typescript';
+    case 'tsx': return 'typescript';
+    case 'css': return 'css';
+    case 'html': return 'html';
+    case 'json': return 'json';
+    case 'py': return 'python';
+    case 'java': return 'java';
+    case 'cpp': return 'cpp';
+    case 'c': return 'c';
+    default: return 'javascript';
+  }
 } 

@@ -414,15 +414,21 @@ export async function runCommand(command: string, args: string[] = []): Promise<
     const process = await webcontainerInstance.spawn(command, args);
     
     let output = '';
-    process.output.pipeTo(
+    const outputPromise = process.output.pipeTo(
       new WritableStream({
         write(data) {
           output += data;
         },
       })
-    );
+    ).catch((error) => {
+      console.warn('Output pipe closed:', error);
+    });
 
     const exitCode = await process.exit;
+    
+    // Wait for output to finish streaming
+    await outputPromise;
+    
     return { output, exitCode };
   } catch (error) {
     console.error(`Failed to run command ${command}:`, error);

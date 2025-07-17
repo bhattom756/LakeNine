@@ -155,7 +155,9 @@ export default function WebContainerDemo() {
           write(data) {
             writeToTerminal(data);
           }
-        }));
+        })).catch((error) => {
+          console.warn('Install output pipe closed:', error);
+        });
         
         const installExitCode = await installProcess.exit;
         if (installExitCode !== 0) {
@@ -180,7 +182,9 @@ export default function WebContainerDemo() {
         write(data) {
           writeToTerminal(data);
         }
-      }));
+      })).catch((error) => {
+        console.warn('Dev server output pipe closed:', error);
+      });
     
       // Wait for `server-ready` event
       webcontainerInstance.on('server-ready', (port, url) => {

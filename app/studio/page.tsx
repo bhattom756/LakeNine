@@ -15,10 +15,12 @@ import { initWebContainer, getFileTree, readFile } from '@/lib/webcontainer';
 type FileStructure = string[];
 type TestResultsType = string[];
 
-// Create a simple chat icon component
+// Create a modern chat icon component
 const ChatIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+    <path d="m2 17 10 5 10-5"></path>
+    <path d="m2 12 10 5 10-5"></path>
   </svg>
 );
 
@@ -291,18 +293,23 @@ export default function StudioPage() {
         </div>
       </div>
 
-      {/* Floating Chat Button */}
+      {/* Modern Floating Chat Button */}
       <button
         onClick={handleChatOpen}
-        className={`fixed bottom-4 right-4 p-3 rounded-full transition-all duration-200 shadow-lg ${
-          user 
-            ? 'bg-[#1e3a8a] text-white hover:bg-[#1e40af]' 
-            : 'bg-gray-600 text-gray-400 cursor-not-allowed'
-        }`}
         disabled={!user}
+        className={`fixed bottom-6 right-6 w-14 h-14 rounded-2xl backdrop-blur-sm border transition-all duration-300 flex items-center justify-center group ${
+          user 
+            ? 'bg-gradient-to-br from-blue-500/20 to-purple-600/20 border-blue-500/30 hover:from-blue-500/30 hover:to-purple-600/30 hover:border-blue-400/50 hover:scale-110 shadow-lg hover:shadow-blue-500/25' 
+            : 'bg-gray-800/50 border-gray-600/30 cursor-not-allowed opacity-50'
+        }`}
         title={user ? 'Open AI Chat' : 'Login required for AI chat'}
       >
-        <ChatIcon />
+        <div className={`w-6 h-6 transition-all duration-200 ${user ? 'text-blue-400 group-hover:text-blue-300' : 'text-gray-500'}`}>
+          <ChatIcon />
+        </div>
+        {user && (
+          <div className="absolute -top-1 -right-1 w-3 h-3 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full animate-pulse" />
+        )}
       </button>
 
       {/* Chat Interface */}
