@@ -1,5 +1,5 @@
 export interface Message {
-  role: "user" | "assistant" | "thinking" | "system";
+  role: "user" | "assistant" | "system";
   content: string;
   isCollapsed?: boolean;
 }

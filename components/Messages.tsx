@@ -23,33 +23,6 @@ export default function Messages({ messages }: MessagesProps) {
           ? !message.isCollapsed 
           : expandedMessages[index];
 
-        if (message.role === "thinking") {
-          return (
-            <div 
-              key={index} 
-              className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-sm"
-            >
-              <div 
-                className="flex justify-between cursor-pointer" 
-                onClick={() => toggleMessageExpansion(index)}
-              >
-                <span className="font-medium text-gray-700">AI Thinking Process</span>
-                <span className="text-blue-500">
-                  {isExpanded ? "Hide details" : "Show details"}
-                </span>
-              </div>
-              
-              {isExpanded && (
-                <div className="mt-3 prose prose-sm max-w-none">
-                  <ReactMarkdown>
-                    {message.content}
-                  </ReactMarkdown>
-                </div>
-              )}
-            </div>
-          );
-        }
-
         if (message.role === "user") {
           return (
             <div key={index} className="bg-blue-50 border border-blue-200 rounded-lg p-4">

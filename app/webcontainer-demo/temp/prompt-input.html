@@ -1,0 +1,39 @@
+<div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+  <input 
+    id="prompt-input"
+    type="text" 
+    placeholder="Describe the website you want to generate (e.g., 'Create a portfolio site with a dark theme')"
+    style="
+      flex: 1;
+      padding: 12px 16px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 1rem;
+    "
+  />
+  <button 
+    id="generate-button"
+    style="
+      padding: 12px 24px;
+      background-color: #0070f3;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-weight: 500;
+      font-size: 1rem;
+      cursor: pointer;
+    "
+  >
+    Generate Website
+  </button>
+</div>
+
+<script>
+  document.getElementById('generate-button').addEventListener('click', function() {
+    const prompt = document.getElementById('prompt-input').value;
+    // Send a message to the parent window with the prompt
+    window.parent.postMessage({ type: 'generate', prompt }, '*');
+  });
+</script> 

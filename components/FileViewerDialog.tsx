@@ -1,17 +1,60 @@
 import * as React from 'react';
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { X, Copy } from 'lucide-react';
+import { writeFile } from '@/lib/webcontainer';
+import { toast } from 'react-hot-toast';
 
 interface FileViewerDialogProps {
   fileName: string;
   fileContent: string;
   open: boolean;
   onClose: () => void;
+  onFileUpdate?: (filePath: string, content: string) => void;
 }
 
-const FileViewerDialog: React.FC<FileViewerDialogProps> = ({ fileName, fileContent, open, onClose }) => {
+const FileViewerDialog: React.FC<FileViewerDialogProps> = ({ 
+  fileName, 
+  fileContent, 
+  open, 
+  onClose, 
+  onFileUpdate 
+}) => {
   const [copied, setCopied] = React.useState(false);
+  const [editContent, setEditContent] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // Update edit content when file content changes
+  useEffect(() => {
+    setEditContent(fileContent);
+    setHasUnsavedChanges(false);
+  }, [fileContent]);
+
+  // Auto-save functionality with debouncing
+  useEffect(() => {
+    if (!hasUnsavedChanges || editContent === fileContent) return;
+
+    const timeoutId = setTimeout(async () => {
+      try {
+        setIsSaving(true);
+        await writeFile(fileName, editContent);
+        
+        if (onFileUpdate) {
+          onFileUpdate(fileName, editContent);
+        }
+        
+        setHasUnsavedChanges(false);
+      } catch (error) {
+        console.error('Auto-save failed:', error);
+        toast.error('Auto-save failed');
+      } finally {
+        setIsSaving(false);
+      }
+    }, 1000); // Auto-save after 1 second of no changes
+
+    return () => clearTimeout(timeoutId);
+  }, [editContent, fileName, onFileUpdate, hasUnsavedChanges, fileContent]);
 
   // Helper to determine file type for formatting
   const getFileTypeForFormatting = (filename: string): string => {
@@ -27,7 +70,7 @@ const FileViewerDialog: React.FC<FileViewerDialogProps> = ({ fileName, fileConte
     return 'text';
   };
 
-  // Format code for better readability
+  // Format code for better readability (only for display, not editing)
   const formattedContent = useMemo(() => {
     try {
       const fileType = getFileTypeForFormatting(fileName);
@@ -130,15 +173,29 @@ const FileViewerDialog: React.FC<FileViewerDialogProps> = ({ fileName, fileConte
 
   // Handle copy to clipboard
   const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(fileContent);
+    navigator.clipboard.writeText(editContent);
     setCopied(true);
+    toast.success('Copied to clipboard!');
     setTimeout(() => setCopied(false), 2000);
+  }, [editContent]);
+
+  // Handle content change
+  const handleContentChange = useCallback((value: string) => {
+    setEditContent(value);
+    setHasUnsavedChanges(value !== fileContent);
   }, [fileContent]);
+
+  // Handle keyboard shortcuts
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      handleClose();
+    }
+  }, [handleClose]);
 
   // Get code lines for display
   const codeLines = useMemo(() => {
-    return formattedContent.split('\n');
-  }, [formattedContent]);
+    return editContent.split('\n');
+  }, [editContent]);
 
   // Apply syntax highlighting based on file type
   const syntaxHighlight = useCallback((line: string, fileType: string): string => {
@@ -212,13 +269,18 @@ const FileViewerDialog: React.FC<FileViewerDialogProps> = ({ fileName, fileConte
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-5xl bg-black p-0 overflow-hidden animate-in fade-in slide-in-from-bottom-8 border border-gray-800 h-[80vh]">
+      <DialogContent 
+        className="max-w-5xl bg-black p-0 overflow-hidden animate-in fade-in slide-in-from-bottom-8 border border-gray-800 h-[80vh]"
+        onKeyDown={handleKeyDown}
+      >
         <div className="w-full h-full flex flex-col">
           {/* Header */}
           <DialogHeader className="flex flex-row items-center justify-between px-6 py-3 border-b border-gray-800 bg-black">
             <DialogTitle className="text-white text-base font-mono flex items-center">
               <span className="mr-2">{fileIcon}</span>
               {fileName}
+              {isSaving && <span className="ml-2 text-yellow-400 text-xs">Saving...</span>}
+              {hasUnsavedChanges && !isSaving && <span className="ml-2 text-orange-400 text-xs">●</span>}
             </DialogTitle>
             <div className="flex items-center gap-2 pr-2">
               <button 
@@ -237,24 +299,17 @@ const FileViewerDialog: React.FC<FileViewerDialogProps> = ({ fileName, fileConte
             </div>
           </DialogHeader>
           
-          {/* Guaranteed scrollable content */}
-          <div className="flex-1 overflow-auto" style={{ maxHeight: "calc(80vh - 60px)" }}>
-            <table className="w-full border-collapse">
-              <tbody>
-                {codeLines.map((line, i) => (
-                  <tr key={i} className="leading-tight">
-                    <td className="text-right pr-4 pl-2 border-r border-gray-700 text-gray-500 sticky left-0 bg-black select-none w-[50px] font-mono text-xs">
-                      {i + 1}
-                    </td>
-                    <td className="px-4 whitespace-pre font-mono text-sm">
-                      <span dangerouslySetInnerHTML={{ 
-                        __html: syntaxHighlight(line, getFileType)
-                      }} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          {/* Content - Always in edit mode */}
+          <div className="flex-1 overflow-hidden" style={{ maxHeight: "calc(80vh - 60px)" }}>
+            <textarea
+              value={editContent}
+              onChange={(e) => handleContentChange(e.target.value)}
+              className="w-full h-full bg-gray-900 text-white font-mono text-sm p-4 border-none outline-none resize-none leading-5"
+              style={{ minHeight: 'calc(80vh - 60px)' }}
+              placeholder="Enter your code here..."
+              spellCheck={false}
+              autoFocus
+            />
           </div>
         </div>
       </DialogContent>

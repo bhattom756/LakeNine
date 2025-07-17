@@ -14,9 +14,8 @@ interface ChatInterfaceProps {
 }
 
 interface Message {
-  role: "user" | "assistant" | "thinking";
+  role: "user" | "assistant";
   content: string;
-  isCollapsed?: boolean;
 }
 
 // Update the generateProjectWithAI function to include RAG-specific messaging
@@ -59,83 +58,6 @@ export default function ChatInterface({
   const [aiPlan, setAiPlan] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Function to update thinking message incrementally
-  const updateThinkingMessage = (newContent: string) => {
-    setMessages(prev => 
-      prev.map(msg => 
-        msg.role === "thinking" 
-          ? {...msg, content: msg.content + "\n" + newContent} 
-          : msg
-      )
-    );
-  };
-
-  // Update the simulateThinking function to include WebContainer-specific steps
-  const simulateThinking = async (websiteType: string, framework: string) => {
-    setMessages((prev) => [
-      ...prev,
-      { role: "thinking", content: `## Analyzing Request: ${websiteType} Website with ${framework}\n` },
-    ]);
-    
-    const updateThinkingIndex = messages.length;
-    
-    // Wait a moment to give the feeling of "thinking"
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Start adding thinking points - general first
-    updateThinkingMessage("Analyzing request components and structure needed...");
-    await new Promise(resolve => setTimeout(resolve, 500));
-    updateThinkingMessage("This will be a fully responsive website with modern design principles.");
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Different thinking tracks based on framework
-    if (framework === 'React' || framework === 'Next.js') {
-      updateThinkingMessage("- Will implement with " + framework + " components");
-      await new Promise(resolve => setTimeout(resolve, 400));
-      updateThinkingMessage("- Will add React Awesome Reveal animations for smooth, professional transitions");
-      await new Promise(resolve => setTimeout(resolve, 400));
-      updateThinkingMessage("- Will use Fade, Slide, and Zoom animations on key elements");
-      await new Promise(resolve => setTimeout(resolve, 400));
-      updateThinkingMessage("- Will implement staggered animations for lists and grids");
-      await new Promise(resolve => setTimeout(resolve, 400));
-      updateThinkingMessage("- Will use Tailwind CSS for styling");
-      await new Promise(resolve => setTimeout(resolve, 400));
-      updateThinkingMessage("- Will create modular component architecture");
-      await new Promise(resolve => setTimeout(resolve, 400));
-      updateThinkingMessage("- Will use responsive design principles");
-      await new Promise(resolve => setTimeout(resolve, 400));
-      updateThinkingMessage("- Will implement proper state management");
-      await new Promise(resolve => setTimeout(resolve, 400));
-      updateThinkingMessage("- Will ensure accessibility compliance");
-      await new Promise(resolve => setTimeout(resolve, 400));
-      updateThinkingMessage("- Will run in WebContainer for instant preview");
-    } else if (framework.includes('Vue') || framework.includes('Angular')) {
-      updateThinkingMessage("- Will implement with " + framework + " components");
-      await new Promise(resolve => setTimeout(resolve, 400));
-      updateThinkingMessage("- Will add smooth animations and transitions");
-      await new Promise(resolve => setTimeout(resolve, 400));
-      updateThinkingMessage("- Will use Tailwind CSS for styling");
-      await new Promise(resolve => setTimeout(resolve, 400));
-      updateThinkingMessage("- Will create modular component architecture");
-      await new Promise(resolve => setTimeout(resolve, 400));
-      updateThinkingMessage("- Will use responsive design principles");
-      await new Promise(resolve => setTimeout(resolve, 400));
-      updateThinkingMessage("- Will implement proper state management");
-      await new Promise(resolve => setTimeout(resolve, 400));
-      updateThinkingMessage("- Will run in WebContainer for instant preview");
-    } else {
-      updateThinkingMessage("- Clean and modular CSS with variables for consistent styling");
-      await new Promise(resolve => setTimeout(resolve, 300));
-      updateThinkingMessage("- Vanilla JavaScript for interactivity without dependencies");
-      await new Promise(resolve => setTimeout(resolve, 300));
-      updateThinkingMessage("- Mobile-first responsive design with media queries");
-      await new Promise(resolve => setTimeout(resolve, 300));
-      updateThinkingMessage("- Form validation and interactive navigation");
-      await new Promise(resolve => setTimeout(resolve, 300));
-      updateThinkingMessage("- Will run in WebContainer if needed");
-    }
-  };
-
   const handleSend = async () => {
     if (!input.trim()) return;
     
@@ -165,35 +87,20 @@ export default function ChatInterface({
                        lowerInput.includes('restaurant') ? 'Restaurant' :
                        lowerInput.includes('portfolio') ? 'Portfolio' : 'Generic';
     
-    const framework = isBasicWeb ? 'HTML/CSS/JS' :
-                     lowerInput.includes('react') ? 'React' : 
-                     lowerInput.includes('next') ? 'Next.js' :
-                     lowerInput.includes('vue') ? 'Vue.js' :
-                     lowerInput.includes('angular') ? 'Angular' : 'HTML/CSS/JS';
-    
-    // Start simulating thinking in real-time
-    await simulateThinking(websiteType, framework);
-    
     try {
       // Continue with actual API call while thinking is displayed
       const aiResponse = await generateProjectWithAI(userMessage.content);
       setAiPlan(aiResponse.plan);
       
       // Process files to ensure they're WebContainer-ready
-      const processedFiles = prepareFilesForWebContainer(aiResponse.files, framework);
+      const processedFiles = prepareFilesForWebContainer(aiResponse.files, websiteType);
       setProjectFiles(processedFiles);
-      
-      // Update thinking with file structure plan
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      updateThinkingMessage("\n\n## File Structure Plan");
-      await new Promise(resolve => setTimeout(resolve, 500));
-      updateThinkingMessage(aiResponse.plan);
       
       // Update file structure in UI based on actual files
       let allFiles: string[] = [];
       
       // Only add React-specific files if we're actually using React
-      if (framework.includes('React') || framework.includes('Next')) {
+      if (websiteType === 'React' || websiteType === 'Next.js') {
         allFiles = [
           "package.json", 
           "README.md",
@@ -242,7 +149,7 @@ export default function ChatInterface({
       
       setTestResults([
         "✅ Project structure created successfully",
-        `✅ All files generated with ${isBasicWeb ? 'HTML/CSS/JS' : framework}`,
+        `✅ All files generated with ${isBasicWeb ? 'HTML/CSS/JS' : websiteType}`,
         "✅ Development server running in WebContainer",
         "✅ Code quality verified",
         "✅ Responsive design implemented",
@@ -260,7 +167,7 @@ export default function ChatInterface({
         ...prev,
         { 
           role: "assistant", 
-          content: `**Files Created**\n\nYour ${websiteType} website has been successfully generated with ${framework} and is now running in WebContainer. You can preview the live site and explore the files in the file explorer.` 
+          content: `**Files Created**\n\nYour ${websiteType} website has been successfully generated with ${websiteType} and is now running in WebContainer. You can preview the live site and explore the files in the file explorer.` 
         },
       ]);
       
@@ -415,15 +322,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     return processedFiles;
   }
 
-  // Add function to toggle message collapse
-  const toggleMessageCollapse = (index: number) => {
-    setMessages(prev => 
-      prev.map((msg, i) => 
-        i === index ? {...msg, isCollapsed: !msg.isCollapsed} : msg
-      )
-    );
-  };
-
   if (!isOpen) return null;
 
   return (
@@ -466,55 +364,33 @@ ReactDOM.createRoot(document.getElementById('root')).render(
             <div key={index} className={`${
               message.role === "user" 
                 ? "flex justify-end" 
-                : message.role === "thinking" 
-                  ? "thinking-message"
-                  : "flex justify-start"
+                : "flex justify-start"
             }`}>
-              {message.role === "thinking" ? (
-                <div className="w-full bg-[#2a2a3a] text-gray-300 rounded-lg overflow-hidden border border-gray-700 shadow-lg">
-                  <div 
-                    className="flex items-center p-3 cursor-pointer bg-gradient-to-r from-[#1a1a3a] to-[#2a2a4a]"
-                    onClick={() => toggleMessageCollapse(index)}
-                  >
-                    {message.isCollapsed ? 
-                      <ChevronRight className="w-5 h-5 mr-2" /> : 
-                      <ChevronDown className="w-5 h-5 mr-2" />
+              <div
+                className={`max-w-[80%] rounded-lg p-4 ${
+                  message.role === "user"
+                    ? "bg-[#1e3a8a] text-white"
+                    : "bg-[#2a2a2a] text-gray-200 border border-gray-700"
+                }`}
+              >
+                <div className="prose prose-invert prose-sm max-w-none">
+                  {/* Parse markdown-like syntax */}
+                  {message.content.split('\n\n').map((paragraph, i) => {
+                    if (paragraph.startsWith('```')) {
+                      const codeContent = paragraph.replace(/```[a-z]*\n/, '').replace(/```$/, '');
+                      return (
+                        <pre key={i} className="bg-[#1a1a2a] p-3 rounded-md text-xs overflow-x-auto">
+                          <code>{codeContent}</code>
+                        </pre>
+                      );
+                    } else if (paragraph.startsWith('**') && paragraph.endsWith('**')) {
+                      return <h4 key={i} className="font-bold text-blue-300">{paragraph.replace(/\*\*/g, '')}</h4>;
+                    } else {
+                      return <p key={i}>{paragraph}</p>;
                     }
-                    <span className="font-medium">AI Thinking Process</span>
-                  </div>
-                  {!message.isCollapsed && (
-                    <div className="p-3 font-mono text-sm whitespace-pre-wrap">
-                      {message.content}
-                    </div>
-                  )}
+                  })}
                 </div>
-              ) : (
-                <div
-                  className={`max-w-[80%] rounded-lg p-4 ${
-                    message.role === "user"
-                      ? "bg-[#1e3a8a] text-white"
-                      : "bg-[#2a2a2a] text-gray-200 border border-gray-700"
-                  }`}
-                >
-                  <div className="prose prose-invert prose-sm max-w-none">
-                    {/* Parse markdown-like syntax */}
-                    {message.content.split('\n\n').map((paragraph, i) => {
-                      if (paragraph.startsWith('```')) {
-                        const codeContent = paragraph.replace(/```[a-z]*\n/, '').replace(/```$/, '');
-                        return (
-                          <pre key={i} className="bg-[#1a1a2a] p-3 rounded-md text-xs overflow-x-auto">
-                            <code>{codeContent}</code>
-                          </pre>
-                        );
-                      } else if (paragraph.startsWith('**') && paragraph.endsWith('**')) {
-                        return <h4 key={i} className="font-bold text-blue-300">{paragraph.replace(/\*\*/g, '')}</h4>;
-                      } else {
-                        return <p key={i}>{paragraph}</p>;
-                      }
-                    })}
-                  </div>
-                </div>
-              )}
+              </div>
             </div>
           ))}
           {isGenerating && (

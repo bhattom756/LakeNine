@@ -1,21 +1,21 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import { useUser } from '@/context/UserContext';
 import FileTree from '@/components/FileTree';
 import LivePreview from '@/components/LivePreview';
 import TestResults from '@/components/TestResults';
 import Navbar from '@/components/ui/Navbar';
-import { ResizableLayout } from '@/components/ui/ResizableLayout';
 import ChatInterface from '@/components/ChatInterface';
 import FileViewerDialog from '@/components/FileViewerDialog';
-import { initWebContainerAuth } from '@/lib/webcontainer';
-
-// Remove auth initialization here
+import { toast } from 'react-hot-toast';
+import { initWebContainer, getFileTree, readFile } from '@/lib/webcontainer';
 
 type FileStructure = string[];
 type TestResultsType = string[];
 
-// Create a simple chat icon component instead of using heroicons
+// Create a simple chat icon component
 const ChatIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
@@ -23,7 +23,8 @@ const ChatIcon = () => (
 );
 
 export default function StudioPage() {
-  const [prompt, setPrompt] = useState<string>('');
+  const { user, loading } = useUser();
+  const router = useRouter();
   const [fileStructure, setFileStructure] = useState<FileStructure>([]);
   const [generatedCode, setGeneratedCode] = useState<string>('');
   const [testResults, setTestResults] = useState<TestResultsType>([]);
@@ -32,81 +33,159 @@ export default function StudioPage() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [projectFiles, setProjectFiles] = useState<Record<string, string>>({});
-  
-  // Separate state for tracking if files have been initialized
-  const [filesInitialized, setFilesInitialized] = useState(false);
+  const [webContainerInitialized, setWebContainerInitialized] = useState(false);
+  const [isInitializingWebContainer, setIsInitializingWebContainer] = useState(false);
 
-  // Initialize WebContainer auth in useEffect
+  // Initialize WebContainer on mount if user is logged in
   useEffect(() => {
-    // Initialize WebContainer auth here, in client-side only
-    initWebContainerAuth();
-  }, []);
+    if (user && !webContainerInitialized && !isInitializingWebContainer) {
+      setIsInitializingWebContainer(true);
+      initWebContainer()
+        .then(async () => {
+          setWebContainerInitialized(true);
+          toast.success('Development environment ready!');
+          
+          // Update file structure with default files
+          const files = await getFileTree();
+          setFileStructure(files);
+          
+          // Load initial file contents (only for actual files, not directories)
+          const initialFiles: Record<string, string> = {};
+          for (const filePath of files) {
+            try {
+              // Skip directories (they typically end with / or don't have extensions for common dirs)
+              if (filePath.includes('/node_modules/') || 
+                  filePath.endsWith('/') || 
+                  filePath === '/public' ||
+                  filePath === '/src' ||
+                  filePath.includes('/.')) {
+                continue;
+              }
+              
+              // Only read files with extensions or known file names
+              const fileName = filePath.split('/').pop() || '';
+              if (fileName.includes('.') || 
+                  ['README', 'LICENSE', 'Dockerfile', 'Makefile'].includes(fileName)) {
+                const content = await readFile(filePath);
+                initialFiles[filePath] = content;
+              }
+            } catch (error) {
+              // Silently skip files that can't be read (likely directories or special files)
+              console.debug(`Skipped reading ${filePath}:`, error);
+            }
+          }
+          setProjectFiles(initialFiles);
+        })
+        .catch((error) => {
+          console.error('Failed to initialize WebContainer:', error);
+          toast.error('Failed to initialize development environment');
+        })
+        .finally(() => {
+          setIsInitializingWebContainer(false);
+        });
+    }
+  }, [user, webContainerInitialized, isInitializingWebContainer]);
 
-  // Use useCallback for the file click handler
-  const handleFileClick = useCallback((filePath: string) => {
+  // Handle login redirect
+  const handleLoginRedirect = () => {
+    // Store the current route to redirect back after login
+    localStorage.setItem('authRedirectPath', '/studio');
+    router.push('/login');
+  };
+
+  // File click handler
+  const handleFileClick = useCallback(async (filePath: string) => {
+    // Don't try to open directories
+    if (filePath.endsWith('/')) {
+      return;
+    }
+    
     setSelectedFile(filePath);
-  }, []);
-
-  // Fix the infinite loop by ensuring this effect only runs when necessary
-  useEffect(() => {
-    if (generatedCode && fileStructure.length > 0 && !filesInitialized) {
-      // Only initialize default files if they haven't been initialized yet
-      const defaultFiles: Record<string, string> = {};
-      
-      // If no project files explicitly set, create an example file
-      if (Object.keys(projectFiles).length === 0) {
-        const mainFile = fileStructure.find(f => 
-          f === 'index.html' || f === 'src/App.js' || f === 'src/index.js'
-        );
-        
-        if (mainFile) {
-          defaultFiles[mainFile] = generatedCode;
-        }
-        
-        // Add empty content for CSS and JS files to prevent 404s
-        if (fileStructure.includes('css/styles.css')) {
-          defaultFiles['css/styles.css'] = '/* CSS styles will go here */';
-        }
-        
-        if (fileStructure.includes('js/script.js')) {
-          defaultFiles['js/script.js'] = '// JavaScript will go here';
-        }
-        
+    
+    // Read the actual file content from WebContainer
+    if (webContainerInitialized) {
+      try {
+        const content = await readFile(filePath);
         setProjectFiles(prev => ({
-          ...defaultFiles,
-          ...prev
+          ...prev,
+          [filePath]: content
         }));
-        
-        // Mark files as initialized to prevent infinite loop
-        setFilesInitialized(true);
+      } catch (error) {
+        console.error('Failed to read file:', error);
+        setProjectFiles(prev => ({
+          ...prev,
+          [filePath]: `// Failed to load file content: ${error}`
+        }));
       }
     }
-  }, [generatedCode, fileStructure, filesInitialized]);
-  
-  // Reset filesInitialized when chat is opened
+  }, [webContainerInitialized]);
+
+  // Handle file update from the editor
+  const handleFileUpdate = useCallback(async (filePath: string, content: string) => {
+    // Update local project files state
+    setProjectFiles(prev => ({
+      ...prev,
+      [filePath]: content
+    }));
+
+    // Update file structure if needed
+    try {
+      const updatedFiles = await getFileTree();
+      setFileStructure(updatedFiles);
+    } catch (error) {
+      console.error('Failed to update file structure:', error);
+    }
+  }, []);
+
+  // Chat interface handlers
   const handleChatOpen = useCallback(() => {
+    if (!user) {
+      toast.error('Please log in to use AI features');
+      return;
+    }
     setIsChatOpen(true);
+  }, [user]);
+
+  const handleChatClose = useCallback(() => {
+    setIsChatOpen(false);
   }, []);
 
   return (
     <div className="bg-black text-white min-h-screen overflow-hidden">
       <Navbar />
 
-      {/* explorer seciton */}
+      {/* Studio Layout */}
       <div className="flex h-[calc(100vh-60px)] overflow-hidden">
-        {/* Left Panel - File Structure */}
+        {/* Left Panel - File Explorer */}
         <div 
           className="bg-[#1a1a1a] border-r border-gray-800 flex flex-col overflow-hidden"
           style={{ width: `${leftWidth}%` }}
         >
-          <div className="px-4 py-3 flex justify-between items-center" style={{background: '#1a1a1a', color: '#fff', fontWeight: 'bold', fontSize: '1.125rem', height: '52px', borderBottom: 'none'}}>
-            <h2 className="text-lg font-semibold text-white">Explorer</h2>
+          <div className="px-4 py-3 bg-[#1a1a1a] text-white font-bold text-lg h-[52px] flex items-center border-b border-gray-800">
+            <h2 className="text-lg font-semibold">Explorer</h2>
           </div>
           <div className="flex-1 overflow-auto p-4">
-            <FileTree 
-              fileStructure={fileStructure} 
-              onFileClick={handleFileClick}
-            />
+            {webContainerInitialized ? (
+              <FileTree 
+                fileStructure={fileStructure} 
+                onFileClick={handleFileClick}
+              />
+            ) : (
+              <div className="text-gray-400 text-sm">
+                {user ? (
+                  isInitializingWebContainer ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                      Initializing...
+                    </div>
+                  ) : (
+                    'Use the AI chat to start building'
+                  )
+                ) : (
+                  'Log in to view files'
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -135,10 +214,43 @@ export default function StudioPage() {
         />
 
         {/* Center Panel - Live Preview */}
-        <div 
-          style={{ width: `${100 - leftWidth - rightWidth}%` }}
-        >
-          <LivePreview generatedCode={generatedCode} projectFiles={projectFiles} />
+        <div style={{ width: `${100 - leftWidth - rightWidth}%` }}>
+          {user && webContainerInitialized ? (
+            <LivePreview generatedCode={generatedCode} projectFiles={projectFiles} />
+          ) : (
+            <div className="w-full h-full bg-gray-900 flex items-center justify-center">
+              <div className="text-center">
+                {!user ? (
+                  <>
+                    <div className="text-6xl mb-4">🔒</div>
+                    <h2 className="text-2xl font-bold mb-4">Login Required</h2>
+                    <p className="text-gray-400 mb-6">Please log in to access the live preview</p>
+                    <button
+                      onClick={handleLoginRedirect}
+                      className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      Login to Continue
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-6xl mb-4">⚡</div>
+                    <h2 className="text-2xl font-bold mb-4">Development Environment</h2>
+                    <p className="text-gray-400 mb-6">
+                      {isInitializingWebContainer 
+                        ? 'Setting up your development environment...' 
+                        : 'Use the AI chat below to start building'}
+                    </p>
+                    {isInitializingWebContainer && (
+                      <div className="flex justify-center">
+                        <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Resize Handle 2 */}
@@ -170,8 +282,8 @@ export default function StudioPage() {
           className="bg-[#1a1a1a] p-6 overflow-hidden border-l border-gray-800"
           style={{ width: `${rightWidth}%` }}
         >
-          <div className="px-4 py-3 flex items-center" style={{background: '#1a1a1a', color: '#fff', fontWeight: 'bold', fontSize: '1.125rem', height: '52px', borderBottom: 'none'}}>
-            <h2 className="text-lg font-semibold text-white m-0">Test Results</h2>
+          <div className="px-4 py-3 bg-[#1a1a1a] text-white font-bold text-lg h-[52px] flex items-center border-b border-gray-800">
+            <h2 className="text-lg font-semibold">Test Results</h2>
           </div>
           <div className="h-full overflow-auto">
             <TestResults testResults={testResults} />
@@ -182,28 +294,34 @@ export default function StudioPage() {
       {/* Floating Chat Button */}
       <button
         onClick={handleChatOpen}
-        className="fixed bottom-4 right-4 p-3 bg-[#1e3a8a] text-white rounded-full hover:bg-[#1e40af] transition-colors duration-200 shadow-lg"
+        className={`fixed bottom-4 right-4 p-3 rounded-full transition-all duration-200 shadow-lg ${
+          user 
+            ? 'bg-[#1e3a8a] text-white hover:bg-[#1e40af]' 
+            : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+        }`}
+        disabled={!user}
+        title={user ? 'Open AI Chat' : 'Login required for AI chat'}
       >
         <ChatIcon />
       </button>
 
       {/* Chat Interface */}
-      <ChatInterface
-        isOpen={isChatOpen}
-        onClose={() => {
-          setIsChatOpen(false);
-          // Reset the filesInitialized flag when closing the chat
-          // This allows a new chat session to set up new files
-          setFilesInitialized(false);
-        }}
-        setGeneratedCode={setGeneratedCode}
-        setFileStructure={setFileStructure}
-        setTestResults={setTestResults}
-        setProjectFiles={files => {
-          setProjectFiles(files);
-          setFilesInitialized(true);
-        }}
-      />
+      {user && (
+        <ChatInterface
+          isOpen={isChatOpen}
+          onClose={handleChatClose}
+          setGeneratedCode={setGeneratedCode}
+          setFileStructure={setFileStructure}
+          setTestResults={setTestResults}
+          setProjectFiles={(files) => {
+            setProjectFiles(files);
+            // Update file structure when files change
+            getFileTree().then(updatedFiles => {
+              setFileStructure(updatedFiles);
+            });
+          }}
+        />
+      )}
 
       {/* File Viewer Dialog */}
       <FileViewerDialog
@@ -211,6 +329,7 @@ export default function StudioPage() {
         fileContent={selectedFile ? (projectFiles[selectedFile] || '// No content available') : ''}
         open={!!selectedFile}
         onClose={() => setSelectedFile(null)}
+        onFileUpdate={handleFileUpdate}
       />
     </div>
   );

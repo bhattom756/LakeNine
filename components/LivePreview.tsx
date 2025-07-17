@@ -1,14 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useMemo, useState } from 'react';
-import { bootWebContainer, createFiles, installDependencies, startDevServer } from '@/lib/webcontainer';
-import { WebContainer } from '@webcontainer/api';
+import { useEffect, useRef, useState } from 'react';
+import { initWebContainer, getWebContainer, getFileTree, writeFile, runCommand, readFile } from '@/lib/webcontainer';
 import { ClipLoader } from 'react-spinners';
 import { IoIosRefresh } from "react-icons/io";
-import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { FaArrowRightToBracket } from "react-icons/fa6";
-
+import { FaArrowRightToBracket, FaDownload } from "react-icons/fa6";
+import { toast } from 'react-hot-toast';
+import JSZip from 'jszip';
 
 interface LivePreviewProps {
   generatedCode: string;
@@ -20,272 +19,412 @@ export default function LivePreview({ generatedCode, projectFiles = {} }: LivePr
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [webcontainerReady, setWebcontainerReady] = useState(false);
-  const [webcontainerInstance, setWebcontainerInstance] = useState<WebContainer | null>(null);
+  const [showTerminal, setShowTerminal] = useState(true);
+  const terminalRef = useRef<HTMLDivElement>(null);
+  const terminalInstanceRef = useRef<any>(null);
+  const fitAddonRef = useRef<any>(null);
+  const [terminalReady, setTerminalReady] = useState(false);
+  const [currentUrl, setCurrentUrl] = useState<string>('');
+  const [serverStarted, setServerStarted] = useState(false);
 
-  // Determine if we should use WebContainer or iframe based on project files
-  const shouldUseWebContainer = useMemo(() => {
-    // Check if this is a Node.js project
-    return Object.keys(projectFiles).some(file => 
-      file === 'package.json' || file.includes('node_modules') || 
-      file.endsWith('.js') || file.endsWith('.jsx') || 
-      file.endsWith('.ts') || file.endsWith('.tsx')
-    );
-  }, [projectFiles]);
-
-  // Find the main HTML file or use generated code (for iframe fallback)
-  const mainHtml = useMemo(() => {
-    // If we have an index.html file, use that
-    if (projectFiles['index.html']) {
-      return projectFiles['index.html'];
-    }
-
-    // Otherwise, use the generated code if it looks like HTML
-    if (generatedCode && (generatedCode.includes('<!DOCTYPE html>') || generatedCode.includes('<html>'))) {
-      return generatedCode;
-    }
-    
-    // Fallback to a basic HTML wrapper
-    return `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Live Preview</title>
-          <style>
-            body { font-family: system-ui, sans-serif; margin: 0; padding: 20px; }
-          </style>
-        </head>
-        <body>
-          <div id="root"></div>
-          <script>
-            // Inject the content into the body or root element
-            document.getElementById('root').innerHTML = \`${generatedCode.replace(/`/g, '\\`')}\`;
-          </script>
-        </body>
-      </html>
-    `;
-  }, [generatedCode, projectFiles]);
-
-  // Boot WebContainer
+  // Initialize terminal
   useEffect(() => {
-    async function initWebContainer() {
-      if (!shouldUseWebContainer) return;
-      
+    if (typeof window === 'undefined' || !showTerminal || terminalInstanceRef.current) return;
+
+    let terminal: any, fitAddon: any;
+
+    const setupTerminal = async () => {
       try {
-        setLoading(true);
-        setError(null);
-        
-        // Boot the WebContainer
-        const webcontainer = await bootWebContainer();
-        setWebcontainerInstance(webcontainer);
-        setWebcontainerReady(true);
-        
-      } catch (err) {
-        console.error('Failed to boot WebContainer:', err);
-        setError('Failed to initialize WebContainer. Falling back to iframe preview.');
-        setWebcontainerReady(false);
-      } finally {
-        setLoading(false);
-      }
-    }
-    
-    initWebContainer();
-  }, [shouldUseWebContainer]);
+        const { Terminal } = await import('@xterm/xterm');
+        const { FitAddon } = await import('@xterm/addon-fit');
 
-  // Set up project in WebContainer when ready and when project files change
-  useEffect(() => {
-    if (!webcontainerReady || !webcontainerInstance || !shouldUseWebContainer || Object.keys(projectFiles).length === 0) {
-      return;
-    }
-
-    async function setupProject() {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        // Create an index.html if none exists
-        const filesToMount = { ...projectFiles };
-        if (!filesToMount['index.html'] && mainHtml) {
-          filesToMount['index.html'] = mainHtml;
-        }
-        
-        // Ensure package.json exists
-        if (!filesToMount['package.json']) {
-          filesToMount['package.json'] = JSON.stringify({
-            name: "generated-app",
-            version: "1.0.0",
-            private: true,
-            scripts: {
-              dev: "vite",
-              build: "vite build",
-              preview: "vite preview"
+        if (terminalRef.current) {
+          terminal = new Terminal({
+            convertEol: true,
+            cursorBlink: true,
+            fontSize: 14,
+            fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+            theme: {
+              background: '#1e1e1e',
+              foreground: '#ffffff',
+              cursor: '#ffffff',
+              black: '#1e1e1e',
+              red: '#f87171',
+              green: '#4ade80',
+              yellow: '#facc15',
+              blue: '#60a5fa',
+              magenta: '#c084fc',
+              cyan: '#22d3ee',
+              white: '#ffffff',
+              brightBlack: '#374151',
+              brightRed: '#fca5a5',
+              brightGreen: '#86efac',
+              brightYellow: '#fde047',
+              brightBlue: '#93c5fd',
+              brightMagenta: '#d8b4fe',
+              brightCyan: '#67e8f9',
+              brightWhite: '#f9fafb',
             },
-            dependencies: {
-              "react": "^18.2.0",
-              "react-dom": "^18.2.0"
-            },
-            devDependencies: {
-              "@vitejs/plugin-react": "^4.0.0",
-              "vite": "^4.3.9"
-            }
-          }, null, 2);
+          });
+
+          fitAddon = new FitAddon();
+          terminal.loadAddon(fitAddon);
+          terminal.open(terminalRef.current);
+          
+          terminalInstanceRef.current = terminal;
+          fitAddonRef.current = fitAddon;
+          setTerminalReady(true);
+
+          // Welcome message
+          terminal.write('\x1b[1;34m┌─ LakeNine Studio Terminal ─┐\x1b[0m\r\n');
+          terminal.write('\x1b[1;32m│  Development Environment   │\x1b[0m\r\n');
+          terminal.write('\x1b[1;34m└─────────────────────────────┘\x1b[0m\r\n\r\n');
+          terminal.write('\x1b[36m~/lakenine-studio\x1b[0m $ ');
+
+          // Fit terminal to container
+          setTimeout(() => fitAddon.fit(), 100);
+
+          // Connect to WebContainer if ready
+          const webcontainer = getWebContainer();
+          if (webcontainer) {
+            connectTerminalToWebContainer(terminal, webcontainer);
+          }
         }
-        
-        // Mount files
-        if (webcontainerInstance) {
-          await createFiles(webcontainerInstance, filesToMount);
-          // Install dependencies
-          await installDependencies(webcontainerInstance);
-          // Start dev server
-          const { serverUrl } = await startDevServer(webcontainerInstance);
-          // Load the URL in the iframe
-          if (iframeRef.current) {
-            iframeRef.current.src = serverUrl;
-          }
-        }
-        
-      } catch (err) {
-        console.error('Failed to setup project in WebContainer:', err);
-        setError('Failed to run project in WebContainer. Check the console for details.');
-      } finally {
-        setLoading(false);
-      }
-    }
-    
-    setupProject();
-  }, [webcontainerReady, webcontainerInstance, projectFiles, mainHtml, shouldUseWebContainer]);
-
-  // Fallback to iframe if not using WebContainer
-  useEffect(() => {
-    if (shouldUseWebContainer || !iframeRef.current) return;
-
-    const iframe = iframeRef.current;
-    const document = iframe.contentDocument;
-    if (!document) return;
-
-    // Clear existing content
-    document.open();
-  
-    // Write the main HTML to the iframe
-    document.write(mainHtml);
-    
-    // Wait for iframe to load before accessing document elements
-    const handleLoad = () => {
-      // Get the window of the iframe
-      const iWindow = iframe.contentWindow;
-      if (!iWindow) return;
-      
-      if (Object.keys(projectFiles).length > 0) {
-        // Create a virtual file system with the files
-        const originalFetch = iWindow.fetch;
-        
-        // Override fetch to handle virtual files
-        iWindow.fetch = function(url: string, options: RequestInit) {
-          const urlString = url.toString();
-          
-          // Check if the URL is for a file we have in our project files
-          if (projectFiles[urlString]) {
-            return Promise.resolve(new Response(projectFiles[urlString], {
-              status: 200,
-              headers: {
-                'Content-Type': urlString.endsWith('.css') ? 'text/css' : 
-                              urlString.endsWith('.js') ? 'application/javascript' :
-                              'text/plain'
-              }
-            }));
-          }
-          
-          // Otherwise, use the original fetch
-          return originalFetch.call(this, url, options);
-        };
-    
-        // Inject CSS files directly
-        Object.entries(projectFiles).forEach(([path, content]) => {
-          if (path.endsWith('.css') && !mainHtml.includes(path)) {
-            if (document.head) {
-              const style = document.createElement('style');
-              style.textContent = content;
-              document.head.appendChild(style);
-            }
-          }
-          
-          // Inject JS files that aren't already included
-          if (path.endsWith('.js') && !mainHtml.includes(path)) {
-            if (document.body) {
-              const script = document.createElement('script');
-              script.textContent = content;
-              document.body.appendChild(script);
-            }
-          }
-        });
+      } catch (error) {
+        console.error('Failed to initialize terminal:', error);
       }
     };
-    
-    // Add load event listener to ensure document is fully loaded
-    iframe.addEventListener('load', handleLoad);
-    
-    document.close();
-    
-    // Clean up event listener
+
+    setupTerminal();
+
     return () => {
-      iframe.removeEventListener('load', handleLoad);
+      if (terminalInstanceRef.current) {
+        terminalInstanceRef.current.dispose();
+        terminalInstanceRef.current = null;
+        fitAddonRef.current = null;
+        setTerminalReady(false);
+      }
     };
-  }, [mainHtml, projectFiles, shouldUseWebContainer]);
+  }, [showTerminal]);
+
+  // Connect terminal to WebContainer
+  const connectTerminalToWebContainer = (terminal: any, webcontainer: any) => {
+    if (!terminal || !webcontainer) return;
+
+    // Start shell process using jsh (WebContainer's built-in shell)
+    webcontainer.spawn('jsh', [], {
+      terminal: {
+        cols: terminal.cols || 80,
+        rows: terminal.rows || 24,
+      },
+    }).then((shellProcess: any) => {
+      // Connect the shell output to terminal
+      shellProcess.output.pipeTo(
+        new WritableStream({
+          write(data) {
+            terminal.write(data);
+          },
+        })
+      );
+
+      // Connect terminal input to shell
+      terminal.onData((data: string) => {
+        shellProcess.input.getWriter().write(data);
+      });
+
+      // Handle shell exit
+      shellProcess.exit.then((exitCode: number) => {
+        terminal.write(`\r\n\x1b[33mShell exited with code ${exitCode}\x1b[0m\r\n`);
+      });
+
+    }).catch((error: any) => {
+      console.error('Failed to start shell:', error);
+      terminal.write('\r\n\x1b[31mFailed to start shell\x1b[0m\r\n');
+      terminal.write('\x1b[36m~/lakenine-studio\x1b[0m $ ');
+    });
+  };
+
+  // Check WebContainer status on mount
+  useEffect(() => {
+    const webcontainer = getWebContainer();
+    if (webcontainer) {
+      setWebcontainerReady(true);
+      
+      // Set up server ready listener
+      webcontainer.on('server-ready', (port: number, url: string) => {
+        setCurrentUrl(url);
+        setServerStarted(true);
+        setLoading(false);
+        
+        if (terminalInstanceRef.current) {
+          terminalInstanceRef.current.write(`\r\n\x1b[32m✓ Server ready at ${url}\x1b[0m\r\n`);
+          terminalInstanceRef.current.write('\x1b[36m~/lakenine-studio\x1b[0m $ ');
+        }
+      });
+
+      // If server is already running, check for URL
+      setTimeout(() => {
+        if (!serverStarted) {
+          // Try to get the server URL (usually localhost:5173 for Vite)
+          const defaultUrl = 'http://localhost:5173';
+          setCurrentUrl(defaultUrl);
+          setServerStarted(true);
+          setLoading(false);
+        }
+      }, 2000);
+    }
+  }, [serverStarted]);
+
+  // Update project files when they change
+  useEffect(() => {
+    if (!webcontainerReady || Object.keys(projectFiles).length === 0) return;
+
+    const updateFiles = async () => {
+      try {
+        const webcontainer = getWebContainer();
+        if (!webcontainer) return;
+
+        if (terminalInstanceRef.current) {
+          terminalInstanceRef.current.write('\r\n\x1b[33m📂 Updating project files...\x1b[0m\r\n');
+        }
+
+        // Write each file to the WebContainer
+        for (const [path, content] of Object.entries(projectFiles)) {
+          await writeFile(path, content);
+        }
+
+        if (terminalInstanceRef.current) {
+          terminalInstanceRef.current.write('\x1b[32m✓ Files updated\x1b[0m\r\n');
+        }
+
+        // If package.json was updated, reinstall dependencies
+        if (projectFiles['package.json']) {
+          if (terminalInstanceRef.current) {
+            terminalInstanceRef.current.write('\x1b[33m📦 Reinstalling dependencies...\x1b[0m\r\n');
+          }
+          const { output } = await runCommand('npm', ['install']);
+          if (terminalInstanceRef.current) {
+            terminalInstanceRef.current.write(output);
+          }
+        }
+
+        // Trigger hot reload - Vite should automatically detect file changes
+        if (terminalInstanceRef.current) {
+          terminalInstanceRef.current.write('\x1b[32m🔥 Hot reload triggered\x1b[0m\r\n');
+          terminalInstanceRef.current.write('\x1b[36m~/lakenine-studio\x1b[0m $ ');
+        }
+
+        // Force iframe refresh after a short delay to ensure changes are applied
+        setTimeout(() => {
+          if (iframeRef.current && currentUrl) {
+            const timestamp = Date.now();
+            iframeRef.current.src = `${currentUrl}?t=${timestamp}`;
+          }
+        }, 500);
+
+      } catch (error) {
+        console.error('Failed to update files:', error);
+        if (terminalInstanceRef.current) {
+          terminalInstanceRef.current.write(`\r\n\x1b[31m❌ Failed to update files: ${error}\x1b[0m\r\n`);
+        }
+      }
+    };
+
+    updateFiles();
+  }, [projectFiles, webcontainerReady, currentUrl]);
+
+  // Handle refresh
+  const handleRefresh = async () => {
+    if (iframeRef.current && currentUrl) {
+      iframeRef.current.src = currentUrl;
+    }
+  };
+
+  // Handle download project as ZIP
+  const handleDownloadProject = async () => {
+    try {
+      toast.loading('Preparing download...', { id: 'download' });
+
+      const webcontainer = getWebContainer();
+      if (!webcontainer) {
+        toast.error('WebContainer not ready', { id: 'download' });
+        return;
+      }
+
+      // Get all files from WebContainer
+      const allFiles = await getFileTree();
+      const zip = new JSZip();
+
+      // Read all files and add to zip
+      for (const filePath of allFiles) {
+        try {
+          // Skip directories and unwanted files
+          if (filePath.endsWith('/') || 
+              filePath.includes('/node_modules/') || 
+              filePath.includes('/.git/') || 
+              filePath.includes('/.next/') ||
+              filePath.includes('/dist/') ||
+              filePath.includes('/build/')) {
+            continue;
+          }
+
+          const content = await readFile(filePath);
+          // Remove leading slash for zip structure
+          const zipPath = filePath.startsWith('/') ? filePath.slice(1) : filePath;
+          zip.file(zipPath, content);
+        } catch (error) {
+          console.warn(`Skipped file ${filePath}:`, error);
+        }
+      }
+
+      // Generate zip file
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      
+      // Create download link
+      const url = URL.createObjectURL(zipBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'lakenine-project.zip';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success('Project downloaded!', { id: 'download' });
+    } catch (error) {
+      console.error('Failed to download project:', error);
+      toast.error('Failed to download project', { id: 'download' });
+    }
+  };
+
+  // Handle resize
+  useEffect(() => {
+    const handleResize = () => {
+      if (fitAddonRef.current) {
+        setTimeout(() => fitAddonRef.current.fit(), 100);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   return (
-    <div className="w-full h-full flex flex-col" style={{background: 'white'}}>
+    <div className="w-full h-full flex flex-col bg-white">
       {/* Top bar */}
-      <div className="w-full px-4 py-3" style={{flex: '0 0 auto', background: '#1a1a1a', color: '#fff', fontWeight: 'bold', fontSize: '1.125rem', margin: 0, letterSpacing: 0, height: '52px', display: 'flex', alignItems: 'center'}}>
+      <div className="w-full px-4 py-3 bg-[#1a1a1a] text-white font-bold text-lg h-[52px] flex items-center">
         <div className="flex items-center gap-2 w-full">
-          <button className="flex items-center justify-center p-1 rounded hover:bg-[#23272e] transition-colors" title="Refresh">
+          <button 
+            onClick={handleRefresh}
+            className="flex items-center justify-center p-1 rounded hover:bg-[#23272e] transition-colors" 
+            title="Refresh"
+            disabled={!currentUrl}
+          >
             <IoIosRefresh size={20} />
           </button>
-          <Input
-            id="preview-url"
-            type="text"
-            placeholder="https://localhost:3000"
-            className="w-full max-w-xs bg-[#23272e] text-white border-none focus:ring-2 focus:ring-blue-500 h-9 px-3 text-sm flex-grow"
-            style={{minWidth: '180px'}}
-          />
-          <Button variant="outline" className="flex items-center gap-1 h-9 px-3 text-sm bg-[#23272e] text-white border-[#36454f] hover:bg-[#2a2a2a] ml-auto">
+          
+          <div className="flex-1 max-w-md">
+            <div className="w-full bg-[#23272e] text-white border border-[#36454f] rounded px-3 py-1.5 text-sm flex items-center gap-2">
+              {currentUrl ? (
+                <>
+                  <div className="flex items-center gap-1 text-green-400">
+                    <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                    <span className="text-xs">LIVE</span>
+                  </div>
+                  <div className="text-gray-300 text-xs">
+                    localhost:5173
+                  </div>
+                </>
+              ) : (
+                <div className="flex items-center gap-2 text-gray-400">
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
+                  <span className="text-xs">Starting server...</span>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          <Button 
+            variant="outline" 
+            className="flex items-center gap-1 h-9 px-3 text-sm bg-[#23272e] text-white border-[#36454f] hover:bg-[#2a2a2a] ml-auto"
+            onClick={() => setShowTerminal(!showTerminal)}
+          >
             <FaArrowRightToBracket size={16} />
-            Show Terminal
+            {showTerminal ? 'Hide Terminal' : 'Show Terminal'}
+          </Button>
+          <Button 
+            variant="outline" 
+            className="flex items-center  h-9 px-3 text-sm bg-[#23272e] text-white border-[#36454f] hover:bg-[#2a2a2a]"
+            onClick={handleDownloadProject}
+            title="Download project as ZIP"
+          >
+            <FaDownload size={16} />
           </Button>
         </div>
       </div>
-      {/* Preview area */}
-      <div className="flex-1 relative flex flex-col" style={{background: 'white', margin: 0, padding: 0}}>
+
+      {/* Main content area */}
+      <div className="flex-1 flex flex-col bg-white relative">
+        {/* Loading overlay */}
         {loading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-80 z-10">
+          <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-90 z-10">
             <div className="text-center">
               <ClipLoader color="#3B82F6" size={40} />
-              <p className="mt-2 text-gray-700">
-                {shouldUseWebContainer ? 'Setting up development environment...' : 'Loading preview...'}
+              <p className="mt-4 text-gray-700 font-medium">
+                Starting development server...
+              </p>
+              <p className="mt-2 text-gray-500 text-sm">
+                Please wait while we prepare your environment
               </p>
             </div>
           </div>
         )}
+
+        {/* Error message */}
         {error && (
-          <div className="absolute top-0 left-0 right-0 bg-red-100 text-red-700 p-2 text-sm z-10">
-            {error}
+          <div className="absolute top-0 left-0 right-0 bg-red-100 text-red-700 p-3 text-sm z-10 border-b border-red-200">
+            <div className="flex items-center gap-2">
+              <span className="text-red-500">❌</span>
+              {error}
+            </div>
           </div>
         )}
+
+        {/* WebContainer status indicator */}
         {webcontainerReady && (
-          <div className="absolute top-2 right-2 bg-blue-600 text-white text-xs px-2 py-1 rounded-full z-10 flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
-              <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
-              <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
-              <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
-            </svg>
-            WebContainer Active
+          <div className="absolute top-2 right-2 bg-green-600 text-white text-xs px-3 py-1 rounded-full z-10 flex items-center gap-1">
+            <div className="w-2 h-2 bg-green-300 rounded-full animate-pulse"></div>
+            WebContainer Ready
           </div>
         )}
+
+        {/* Preview iframe */}
         <iframe
           ref={iframeRef}
           title="Live Preview"
-          className="w-full h-full"
-          style={{border: 'none', borderRadius: 0, margin: 0, padding: 0, boxShadow: 'none', background: 'white', display: 'block'}}
-          sandbox={shouldUseWebContainer ? "allow-scripts allow-same-origin allow-forms" : "allow-scripts allow-same-origin"}
+          className={`w-full ${showTerminal ? 'h-1/2' : 'h-full'} border-none bg-white`}
+          sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
+          src={currentUrl || undefined}
         />
+
+        {/* Terminal */}
+        {showTerminal && (
+          <div className="h-1/2 bg-[#1e1e1e] border-t border-gray-700 flex flex-col">
+            <div className="bg-[#2d2d2d] px-4 py-2 text-white text-sm flex items-center gap-2 border-b border-gray-600">
+              <div className="flex gap-1">
+                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+              </div>
+              <span className="ml-2">Terminal</span>
+            </div>
+            <div 
+              ref={terminalRef} 
+              className="flex-1 p-2"
+              style={{ fontFamily: 'Menlo, Monaco, "Courier New", monospace' }}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
