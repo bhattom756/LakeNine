@@ -36,7 +36,7 @@ const Navbar = () => {
 
   return (
     <>
-    <header className="sticky top-0 z-50 flex items-center justify-between whitespace-nowrap navbar-glass px-6 sm:px-10 py-4">
+    <header className="sticky top-0 z-50 flex items-center justify-between whitespace-nowrap navbar-glass px-6 sm:px-10 py-[5px]">
       <div className="flex items-center gap-3">
         <div className="size-6 text-blue-400">
           <svg fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
@@ -50,8 +50,8 @@ const Navbar = () => {
       
       <div className="flex items-center gap-3">
         {!isUserLoaded ? (
-          <Link href="/login" className="flex min-w-[84px] max-w-[480px] glass-button cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 text-white text-sm font-medium leading-normal tracking-[0.015em] transition-all duration-300">
-            <span className="truncate">Login</span>
+          <Link href="/login" className="flex min-w-[84px] max-w-[480px] glass-button cursor-pointer items-center justify-center overflow-hidden rounded-md h-10 px-4 m-1 text-white text-sm font-medium leading-normal tracking-[0.015em] transition-all duration-300">
+            <span className="truncate">Sign In</span>
           </Link>
         ) : (
           <DropdownMenu>

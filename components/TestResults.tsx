@@ -17,13 +17,14 @@ export default function TestResults({ testResults }: TestResultsProps) {
   };
 
   return (
-    <div className="text-white">
+    <div className="text-white m-1 p-2">
       <button
         onClick={handleStartTesting}
-        className="mb-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded"
+        className="flex items-center justify-center rounded-xl h-10 px-6 text-white text-sm font-medium leading-normal tracking-[0.015em] transition-all duration-300 bg-gradient-to-br from-gray-800 via-gray-900 to-black hover:from-gray-700 hover:to-gray-800 shadow-lg"
+                      
         disabled={running}
       >
-        {running ? 'Running Tests...' : 'Start Unit Testing'}
+        {running ? 'Running Tests...' : 'Perform Component Validation'}
       </button>
       <ul>
         {testResults.map((result, index) => (

@@ -184,7 +184,7 @@ export default function StudioPage() {
                     'Use the AI chat to start building'
                   )
                 ) : (
-                  'Log in to view files'
+                  'Sign In to view your files.'
                 )}
               </div>
             )}
@@ -220,19 +220,21 @@ export default function StudioPage() {
           {user && webContainerInitialized ? (
             <LivePreview generatedCode={generatedCode} projectFiles={projectFiles} />
           ) : (
-            <div className="w-full h-full bg-gray-900 flex items-center justify-center">
+            <div className="w-full h-full bg-white flex items-center justify-center">
               <div className="text-center">
                 {!user ? (
                   <>
-                    <div className="text-6xl mb-4">🔒</div>
-                    <h2 className="text-2xl font-bold mb-4">Login Required</h2>
+                    <div className="text-6xl mb-4"></div>
+                    <h2 className="text-2xl font-bold mb-4 text-black">Login Required</h2>
                     <p className="text-gray-400 mb-6">Please log in to access the live preview</p>
-                    <button
-                      onClick={handleLoginRedirect}
-                      className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                      Login to Continue
-                    </button>
+                    <div className="flex justify-center mt-6">
+                      <button
+                        onClick={handleLoginRedirect}
+                        className="flex items-center justify-center rounded-xl h-10 px-6 text-white text-sm font-medium leading-normal tracking-[0.015em] transition-all duration-300 bg-gradient-to-br from-gray-800 via-gray-900 to-black hover:from-gray-700 hover:to-gray-800 shadow-lg"
+                      >
+                        Login to Continue
+                      </button>
+                    </div>
                   </>
                 ) : (
                   <>
@@ -281,11 +283,11 @@ export default function StudioPage() {
 
         {/* Right Panel - Test Results */}
         <div 
-          className="bg-[#1a1a1a] p-6 overflow-hidden border-l border-gray-800"
+          className="bg-[#1a1a1a] overflow-hidden border-l border-gray-800"
           style={{ width: `${rightWidth}%` }}
         >
           <div className="px-4 py-3 bg-[#1a1a1a] text-white font-bold text-lg h-[52px] flex items-center border-b border-gray-800">
-            <h2 className="text-lg font-semibold">Test Results</h2>
+            <h2 className="text-lg font-semibold">Component Testing</h2>
           </div>
           <div className="h-full overflow-auto">
             <TestResults testResults={testResults} />
