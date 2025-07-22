@@ -3,7 +3,7 @@ import { WebContainer, type FileSystemTree } from '@webcontainer/api';
 let webcontainerInstance: WebContainer | null = null;
 let isInitializing = false;
 
-// Default starter files - React + Vite project
+// Default starter files - React + Vite project with correct structure
 export const defaultFiles: FileSystemTree = {
   'package.json': {
     file: {
@@ -20,15 +20,19 @@ export const defaultFiles: FileSystemTree = {
   },
   "dependencies": {
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "tailwindcss": "^3.4.0",
+    "@tailwindcss/forms": "^0.5.7"
   },
   "devDependencies": {
     "@types/react": "^18.2.66",
     "@types/react-dom": "^18.2.22",
     "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.14",
     "eslint": "^8.57.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.6",
+    "postcss": "^8.4.24",
     "vite": "^5.2.0"
   }
 }`,
@@ -50,6 +54,31 @@ export default defineConfig({
     }
   }
 })`,
+    },
+  },
+  'tailwind.config.js': {
+    file: {
+      contents: `/** @type {import('tailwindcss').Config} */
+export default {
+  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
+  ],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+}`,
+    },
+  },
+  'postcss.config.js': {
+    file: {
+      contents: `export default {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+}`,
     },
   },
   'index.html': {
@@ -87,27 +116,27 @@ ReactDOM.createRoot(document.getElementById('root')).render(
       },
       'App.jsx': {
         file: {
-          contents: `import { useState } from 'react'
-import './App.css'
+          contents: `import React from 'react'
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <div className="App">
-      <div>
-        <h1>🚀 Welcome to LakeNine Studio!</h1>
-        <div className="card">
-          <button onClick={() => setCount((count) => count + 1)}>
-            count is {count}
-          </button>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test HMR
-          </p>
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+      <div className="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden">
+        <div className="p-8">
+          <div className="text-center">
+            <h1 className="text-3xl font-bold text-gray-900 mb-4">
+              🚀 Welcome to LakeNine Studio!
+            </h1>
+            <p className="text-gray-600 mb-6">
+              Your AI-powered development environment is ready! Use the chat interface to generate your website.
+            </p>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-blue-800 text-sm">
+                Click the chat icon in the bottom right to start building your website with AI.
+              </p>
+            </div>
+          </div>
         </div>
-        <p className="read-the-docs">
-          Your AI-powered development environment is ready!
-        </p>
       </div>
     </div>
   )
@@ -116,124 +145,21 @@ function App() {
 export default App`,
         },
       },
-      'App.css': {
-        file: {
-          contents: `#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
-}
-
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
-}
-
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
-}`,
-        },
-      },
       'index.css': {
         file: {
-          contents: `:root {
+          contents: `@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-text-size-adjust: 100%;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
 }
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
   min-height: 100vh;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  color: white;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-    color: #213547;
-  }
 }`,
         },
       },
@@ -359,10 +285,95 @@ export async function writeFile(path: string, content: string): Promise<void> {
 
   try {
     await webcontainerInstance.fs.writeFile(path, content);
+    console.log(`✅ Written file: ${path}`);
   } catch (error) {
     console.error(`Failed to write file ${path}:`, error);
     throw error;
   }
+}
+
+// Write multiple files to WebContainer
+export async function writeMultipleFiles(files: Record<string, string>): Promise<void> {
+  if (!webcontainerInstance) {
+    throw new Error('WebContainer not initialized');
+  }
+
+  console.log(`📝 Writing ${Object.keys(files).length} files to WebContainer...`);
+  
+  try {
+    // Transform files to proper WebContainer structure
+    const transformedFiles = transformFilesToWebContainerStructure(files);
+    
+    // Write files individually to handle nested structure
+    for (const [filePath, content] of Object.entries(files)) {
+      // Convert paths like "components/Header.jsx" to "src/Header.jsx" (flat structure)
+      const adjustedPath = adjustFilePath(filePath);
+      
+      try {
+        await webcontainerInstance.fs.writeFile(adjustedPath, content);
+        console.log(`✅ Written: ${adjustedPath}`);
+      } catch (error) {
+        console.error(`❌ Failed to write ${adjustedPath}:`, error);
+      }
+    }
+    
+    console.log('🎉 All files written successfully!');
+  } catch (error) {
+    console.error('❌ Error writing multiple files:', error);
+    throw error;
+  }
+}
+
+// Transform file paths to work with WebContainer's flat structure
+function adjustFilePath(originalPath: string): string {
+  // Remove leading slash if present
+  let path = originalPath.startsWith('/') ? originalPath.slice(1) : originalPath;
+  
+  // Handle different file types and adjust paths
+  if (path.startsWith('components/')) {
+    // Move components to src/ directory
+    path = path.replace('components/', 'src/');
+  } else if (path === 'App.jsx' || path === 'main.jsx') {
+    // Main app files go to src/
+    path = `src/${path}`;
+  } else if (path.endsWith('.jsx') || path.endsWith('.tsx') || path.endsWith('.js') || path.endsWith('.ts')) {
+    // Other component files go to src/ unless they're config files
+    if (!['vite.config.js', 'tailwind.config.js', 'postcss.config.js'].includes(path)) {
+      path = `src/${path}`;
+    }
+  }
+  
+  return path;
+}
+
+// Transform file structure to match WebContainer expectations
+function transformFilesToWebContainerStructure(files: Record<string, string>): Record<string, string> {
+  const transformedFiles: Record<string, string> = {};
+  
+  for (const [originalPath, content] of Object.entries(files)) {
+    const adjustedPath = adjustFilePath(originalPath);
+    
+    // Fix import paths in the content
+    let adjustedContent = content;
+    
+    // Fix relative imports for components moved to src/
+    if (adjustedPath.startsWith('src/') && originalPath.startsWith('components/')) {
+      // Update imports from './components/X' to './X'
+      adjustedContent = adjustedContent.replace(/from\s+['"]\.\.?\/components\//g, "from './");
+      adjustedContent = adjustedContent.replace(/import\s+['"]\.\.?\/components\//g, "import './");
+    }
+    
+    // Fix App.jsx imports
+    if (adjustedPath === 'src/App.jsx') {
+      // Update component imports to work with flat src structure
+      adjustedContent = adjustedContent.replace(/from\s+['"]\.\/components\//g, "from './");
+      adjustedContent = adjustedContent.replace(/import\s+['"]\.\/components\//g, "import './");
+    }
+    
+    transformedFiles[adjustedPath] = adjustedContent;
+  }
+  
+  return transformedFiles;
 }
 
 // Read file from WebContainer
