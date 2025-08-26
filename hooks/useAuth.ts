@@ -13,16 +13,13 @@ import { useAuthState } from 'react-firebase-hooks/auth';
 import { useRouter } from 'next/navigation';
 
 export function useAuth() {
-  // Use react-firebase-hooks for auth state
   const [user, loading, error] = useAuthState(auth);
   const router = useRouter();
   const [authInProgress, setAuthInProgress] = useState(false);
   const [authMessage, setAuthMessage] = useState<string | null>(null);
   
-  // Check for redirect results on auth state changes or component mount
   useEffect(() => {
     const checkRedirectResult = async () => {
-      // Only check when not logged in and not already checking
       if (!loading && !user && !authInProgress) {
         try {
           console.log("[useAuth] Checking for redirect results");

@@ -49,6 +49,23 @@ const categoryMappings: Record<string, string> = {
   'coffee': 'premium coffee cup artisan',
   'chef': 'professional chef cooking restaurant',
   
+  // Logos and Branding
+  'logo': 'modern company logo design professional',
+  'brand': 'professional brand identity logo',
+  'company_logo': 'clean corporate logo design',
+  
+  // Office and Business  
+  'testimonial': 'professional business person portrait',
+  'about': 'professional team meeting office',
+  
+  // Medical and Healthcare
+  'medical': 'modern hospital medical professional',
+  'hospital': 'modern hospital interior medical',
+  'doctor': 'professional doctor medical healthcare',
+  'medical_equipment': 'advanced medical equipment hospital',
+  'healthcare': 'healthcare medical professional care',
+  'clinic': 'modern medical clinic interior',
+  
   // Fashion and Beauty
   'fashion': 'high fashion premium clothing',
   'clothing': 'premium fashion clothing apparel',
@@ -67,6 +84,9 @@ const categoryMappings: Record<string, string> = {
   'product_display': 'premium product photography display',
   'shopping': 'modern shopping experience retail',
   
+  // Restaurant specific
+  'restaurant_interior': 'upscale restaurant dining room interior',
+  
   // Education
   'education': 'modern education classroom',
   'student': 'diverse students learning education',
@@ -74,7 +94,6 @@ const categoryMappings: Record<string, string> = {
   'teacher': 'professional teacher education classroom',
   
   // Default fallbacks by industry
-  'healthcare': 'modern healthcare medical professional',
   'travel': 'scenic luxury travel destination',
   'nature': 'stunning landscape nature scenery',
   'city': 'modern urban city skyline',
@@ -158,18 +177,38 @@ export async function processImagesInCode(code: string): Promise<string> {
       categories.add(match[1]);
     }
     
-    // Fetch all images at once
+    if (categories.size === 0) {
+      console.log('🔍 No image placeholders found in code');
+      return code;
+    }
+    
+    console.log(`📷 Processing ${categories.size} image categories:`, Array.from(categories));
+    
+    // Fetch all images at once with better error handling
     const categoryImages: Record<string, string[]> = {};
     for (const category of categories) {
-      categoryImages[category] = await fetchPexelsImages(category, 1);
+      try {
+        console.log(`🔍 Fetching images for category: ${category}`);
+        categoryImages[category] = await fetchPexelsImages(category, 1);
+        console.log(`✅ Got image for ${category}: ${categoryImages[category][0]}`);
+      } catch (error) {
+        console.warn(`Failed to fetch images for category: ${category}`, error);
+        // Use fallback image for failed categories
+        const fallback = FALLBACK_IMAGES[category] || FALLBACK_IMAGES.default;
+        categoryImages[category] = [fallback[0]];
+        console.log(`🔄 Using fallback for ${category}: ${fallback[0]}`);
+      }
     }
     
     // Replace all placeholders with actual image URLs
     for (const [category, images] of Object.entries(categoryImages)) {
       const categoryRegex = new RegExp(`\\/\\*IMAGE:${category}\\*\\/`, 'g');
+      const replacements = (processedCode.match(categoryRegex) || []).length;
       processedCode = processedCode.replace(categoryRegex, images[0]);
+      console.log(`🔄 Replaced ${replacements} instances of /*IMAGE:${category}*/ with ${images[0]}`);
     }
     
+    console.log(`✅ Image processing complete for all categories`);
     return processedCode;
   } catch (error) {
     console.error('Error processing images in code:', error);
@@ -260,6 +299,59 @@ export const FALLBACK_IMAGES: Record<string, string[]> = {
     'https://images.pexels.com/photos/301926/pexels-photo-301926.jpeg',
     'https://images.pexels.com/photos/256431/pexels-photo-256431.jpeg',
     'https://images.pexels.com/photos/159844/book-read-literature-pages-159844.jpeg',
+  ],
+  // Medical/Healthcare
+  medical: [
+    'https://images.pexels.com/photos/4386467/pexels-photo-4386467.jpeg',
+    'https://images.pexels.com/photos/127873/pexels-photo-127873.jpeg',
+    'https://images.pexels.com/photos/5215024/pexels-photo-5215024.jpeg',
+  ],
+  hospital: [
+    'https://images.pexels.com/photos/263402/pexels-photo-263402.jpeg',
+    'https://images.pexels.com/photos/668300/pexels-photo-668300.jpeg',
+    'https://images.pexels.com/photos/4386467/pexels-photo-4386467.jpeg',
+  ],
+  doctor: [
+    'https://images.pexels.com/photos/5215024/pexels-photo-5215024.jpeg',
+    'https://images.pexels.com/photos/612999/pexels-photo-612999.jpeg',
+    'https://images.pexels.com/photos/4386467/pexels-photo-4386467.jpeg',
+  ],
+  medical_equipment: [
+    'https://images.pexels.com/photos/2280571/pexels-photo-2280571.jpeg',
+    'https://images.pexels.com/photos/4386467/pexels-photo-4386467.jpeg',
+    'https://images.pexels.com/photos/263402/pexels-photo-263402.jpeg',
+  ],
+  // Logos and Branding  
+  logo: [
+    'https://images.pexels.com/photos/270408/pexels-photo-270408.jpeg',
+    'https://images.pexels.com/photos/163064/play-stone-network-networked-interactive-163064.jpeg',
+    'https://images.pexels.com/photos/6801648/pexels-photo-6801648.jpeg',
+  ],
+  brand: [
+    'https://images.pexels.com/photos/270408/pexels-photo-270408.jpeg',
+    'https://images.pexels.com/photos/163064/play-stone-network-networked-interactive-163064.jpeg',
+    'https://images.pexels.com/photos/6801648/pexels-photo-6801648.jpeg',
+  ],
+  company_logo: [
+    'https://images.pexels.com/photos/270408/pexels-photo-270408.jpeg',
+    'https://images.pexels.com/photos/163064/play-stone-network-networked-interactive-163064.jpeg',
+    'https://images.pexels.com/photos/6801648/pexels-photo-6801648.jpeg',
+  ],
+  // Office and Business
+  office: [
+    'https://images.pexels.com/photos/1170412/pexels-photo-1170412.jpeg',
+    'https://images.pexels.com/photos/380769/pexels-photo-380769.jpeg',
+    'https://images.pexels.com/photos/416405/pexels-photo-416405.jpeg',
+  ],
+  testimonial: [
+    'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg',
+    'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg',
+    'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg',
+  ],
+  about: [
+    'https://images.pexels.com/photos/1181622/pexels-photo-1181622.jpeg',
+    'https://images.pexels.com/photos/416405/pexels-photo-416405.jpeg',
+    'https://images.pexels.com/photos/3184360/pexels-photo-3184360.jpeg',
   ],
   gallery: [
     'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg',

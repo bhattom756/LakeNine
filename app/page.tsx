@@ -1,298 +1,339 @@
-"use client";
+'use client'
 
-import React from 'react';
-import Link from 'next/link';
+import React, { useState } from 'react';
+import './style.css';
 import Navbar from '@/components/ui/Navbar';
-import Image from 'next/image';
 
-export default function Home() {
+interface GlassmorphicInterfaceProps {
+  className?: string;
+}
+
+const page: React.FC<GlassmorphicInterfaceProps> = ({ className }) => {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
+
+  const toggleMobileMenu = (): void => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
+  const StarIcon: React.FC<{ className?: string }> = ({ className = "h-5 w-5 text-yellow-400" }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor">
+      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+    </svg>
+  );
+
   return (
-    <div className="min-h-screen text-white relative flex flex-col font-space-grotesk">
-      <div className="layout-container flex h-full grow flex-col">
-        <Navbar />
-
-        <main className="flex flex-1 flex-col">
-          {/* Enhanced Hero Section */}
-          <section className="seamless-section relative min-h-[100vh] flex items-center justify-center overflow-hidden">
-            {/* Floating Elements */}
-            <div className="floating-element"></div>
-            <div className="floating-element"></div>
-            <div className="floating-element"></div>
-            
-            {/* Gradient Overlay */}
-            <div className="absolute inset-0 gradient-overlay z-[1]"></div>
-            
-            {/* Enhanced Hero Content */}
-            <div className="section-content text-center">
-              <div className="relative premium-glass z-10 max-w-4xl mx-auto stagger-item p-12 sm:p-16">
-                <h1 className="text-white text-5xl sm:text-6xl lg:text-7xl font-black leading-tight tracking-tight mb-8">
-                  Build <span className="bg-gradient-to-r from-blue-400 via-blue-500 to-purple-500 bg-clip-text text-transparent">AI Apps</span> in Minutes
-                </h1>
-                <p className="text-gray-300 text-lg sm:text-xl lg:text-2xl font-normal leading-relaxed mb-12 max-w-3xl mx-auto">
-                  LakeNine is the fastest way to build and deploy AI apps. Create stunning applications with our advanced low-code platform, or integrate AI seamlessly with our powerful APIs and SDKs.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                  <Link href="/studio" className="glass-button inline-flex min-w-[160px] cursor-pointer items-center justify-center overflow-hidden rounded-2xl h-14 px-8 text-white text-lg font-bold leading-normal tracking-[0.015em] transform hover:scale-105 transition-all duration-300">
-                    <span className="truncate">Start Building Free</span>
-                    <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                    </svg>
-                  </Link>
-                  <Link href="#features" className="inline-flex min-w-[160px] cursor-pointer items-center justify-center overflow-hidden rounded-2xl h-14 px-8 border border-transparent text-white text-lg font-medium leading-normal tracking-[0.015em] hover:bg-white/10 transition-all duration-300">
-                    <span className="truncate">Learn More</span>
-                  </Link>
-                </div>
+    <div className={`glassmorphic-interface ${className || ''}`}>
+      {/* Background glows */}
+      <div className="glow glow-purple" />
+      <div className="glow glow-blue" />
+      <div className="glow glow-pink" />
+      
+      <Navbar/>
+      {/* Hero Section */}
+      <section className="hero-section">
+        <div className="container mx-auto px-6">
+          <div className="flex flex-col lg:flex-row items-center">
+            <div className="lg:w-1/2 mb-12 lg:mb-0">
+              <h1 className="hero-title">
+                The AI-first <br />
+                <span className="gradient-text">code editor</span>
+              </h1>
+              <p className="hero-description">
+                Experience the future of coding with our AI-powered editor that understands your code and helps you write better software, faster.
+              </p>
+              <div className="hero-buttons">
+                <button className="btn-gradient" onClick={() => window.location.href = '/studio'}>Try Now</button>
+                <button className="btn-glass demo-btn">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.752 11.168l-3.197-2.132A1 1 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Watch Demo
+                </button>
               </div>
             </div>
-          </section>
-
-          {/* Enhanced Features Section */}
-          <section id="features" className="seamless-section animated-bg relative overflow-hidden">
-            <div className="section-content">
-              <div className="max-w-6xl mx-auto relative z-10">
-                <div className="text-center mb-16 sm:mb-20 stagger-item">
-                  <h2 className="text-white text-4xl sm:text-5xl font-bold leading-tight tracking-tight mb-6">
-                    Build AI Apps <span className="bg-gradient-to-r from-blue-400 via-purple-500 to-blue-500 bg-clip-text text-transparent">Your Way</span>
-                  </h2>
-                  <p className="text-gray-300 text-lg sm:text-xl leading-relaxed max-w-3xl mx-auto">
-                    LakeNine offers a flexible platform to build AI apps, whether you prefer low-code tools or custom code integration.
-                  </p>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 sm:gap-10">
-                  <div className="glass-feature p-8 stagger-item">
-                    <div className="relative mb-6">
-                      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-purple-700 flex items-center justify-center mb-4">
-                        <svg fill="white" height="32px" viewBox="0 0 256 256" width="32px" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M48,64a8,8,0,0,1,8-8H72V40a8,8,0,0,1,16,0V56h16a8,8,0,0,1,0,16H88V88a8,8,0,0,1-16,0V72H56A8,8,0,0,1,48,64ZM184,192h-8v-8a8,8,0,0,0-16,0v8h-8a8,8,0,0,0,0,16h8v8a8,8,0,0,0,16,0v-8h8a8,8,0,0,0,0-16Zm56-48H224V128a8,8,0,0,0-16,0v16H192a8,8,0,0,0,0,16h16v16a8,8,0,0,0,16,0V160h16a8,8,0,0,0,0-16ZM219.31,80,80,219.31a16,16,0,0,1-22.62,0L36.68,198.63a16,16,0,0,1,0-22.63L176,36.69a16,16,0,0,1,22.63,0l20.68,20.68A16,16,0,0,1,219.31,80Zm-54.63,32L144,91.31l-96,96L68.68,208ZM208,68.69,187.31,48l-32,32L176,100.69Z"></path>
-                        </svg>
-                      </div>
-                      <div className="absolute -top-2 -right-2 w-6 h-6 bg-blue-600/20 rounded-full animate-pulse"></div>
+            <div className="lg:w-1/2 relative">
+              <div className="code-editor">
+                <div className="editor-window">
+                  <div className="editor-header">
+                    <div className="flex space-x-2">
+                      <div className="traffic-light traffic-light-red" />
+                      <div className="traffic-light traffic-light-yellow" />
+                      <div className="traffic-light traffic-light-green" />
                     </div>
-                    <h3 className="text-white text-2xl font-bold leading-tight mb-4">Low-Code Platform</h3>
-                    <p className="text-gray-300 text-base leading-relaxed">Build AI apps visually with our intuitive drag-and-drop interface. Create powerful applications without writing a single line of code.</p>
+                    <div className="editor-title">main.js</div>
                   </div>
-                  
-                  <div className="glass-feature p-8 stagger-item">
-                    <div className="relative mb-6">
-                      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center mb-4">
-                        <svg fill="white" height="32px" viewBox="0 0 256 256" width="32px" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M69.12,94.15,28.5,128l40.62,33.85a8,8,0,1,1-10.24,12.29l-48-40a8,8,0,0,1,0-12.29l48-40a8,8,0,0,1,10.24,12.3Zm176,27.7-48-40a8,8,0,1,0-10.24,12.3L227.5,128l-40.62,33.85a8,8,0,1,0,10.24,12.29l48-40a8,8,0,0,0,0-12.29ZM162.73,32.48a8,8,0,0,0-10.25,4.79l-64,176a8,8,0,0,0,4.79,10.26A8.14,8.14,0,0,0,96,224a8,8,0,0,0,7.52-5.27l64-176A8,8,0,0,0,162.73,32.48Z"></path>
-                        </svg>
-                      </div>
-                      <div className="absolute -top-2 -right-2 w-6 h-6 bg-purple-600/20 rounded-full animate-pulse"></div>
-                    </div>
-                    <h3 className="text-white text-2xl font-bold leading-tight mb-4">APIs & SDKs</h3>
-                    <p className="text-gray-300 text-base leading-relaxed">Integrate AI into your existing apps with our powerful APIs and SDKs. Seamless integration with comprehensive documentation.</p>
-                  </div>
-                  
-                  <div className="glass-feature p-8 stagger-item">
-                    <div className="relative mb-6">
-                      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-emerald-500 flex items-center justify-center mb-4">
-                        <svg fill="white" height="32px" viewBox="0 0 256 256" width="32px" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M103.77,185.94C103.38,187.49,93.63,224,40,224a8,8,0,0,1-8-8c0-53.63,36.51-63.38,38.06-63.77a8,8,0,0,1,3.88,15.53c-.9.25-22.42,6.54-25.56,39.86C81.7,204.48,88,183,88.26,182a8,8,0,0,1,15.51,4Zm93-67.4L192,123.31v58.33A15.91,15.91,0,0,1,187.32,193L153,227.3A15.91,15.91,0,0,1,141.7,232a16.11,16.11,0,0,1-5.1-.83,15.94,15.94,0,0,1-10.78-12.92l-5.37-38.49L76.24,135.55l-38.47-5.37A16,16,0,0,1,28.7,103L63,68.68A15.91,15.91,0,0,1,74.36,64h58.33l4.77-4.77c26.68-26.67,58.83-27.82,71.41-27.07a16,16,0,0,1,15,15C224.6,59.71,223.45,91.86,196.78,118.54ZM40,114.34l37.15,5.18L116.69,80H74.36ZM91.32,128,128,164.68l57.45-57.45a76.46,76.46,0,0,0,22.42-59.16,76.65,76.65,0,0,0-59.11,22.47ZM176,139.31l-39.53,39.53L141.67,216,176,181.64Z"></path>
-                        </svg>
-                      </div>
-                      <div className="absolute -top-2 -right-2 w-6 h-6 bg-emerald-500/20 rounded-full animate-pulse"></div>
-                    </div>
-                    <h3 className="text-white text-2xl font-bold leading-tight mb-4">Deploy Anywhere</h3>
-                    <p className="text-gray-300 text-base leading-relaxed">Deploy your AI apps to any platform, including web, mobile, and desktop. One codebase, multiple platforms.</p>
+                  <div className="editor-content">
+                    <pre className="code-function">function <span className="code-function-name">generateResponse</span>(<span className="code-param">prompt</span>) &#123;</pre>
+                    <pre className="code-line">  <span className="code-const">const</span> <span className="code-variable">aiModel</span> = <span className="code-function-name">initializeModel</span>();</pre>
+                    <pre className="code-line">  <span className="code-const">const</span> <span className="code-variable">context</span> = <span className="code-function-name">getContext</span>();</pre>
+                    <pre className="code-line">  </pre>
+                    <pre className="code-line">  <span className="code-comment">// Generate AI response based on prompt</span></pre>
+                    <pre className="code-line">  <span className="code-const">const</span> <span className="code-variable">response</span> = <span className="code-const">await</span> <span className="code-variable">aiModel</span>.<span className="code-function-name">generate</span>(&#123;</pre>
+                    <pre className="code-line">    prompt,</pre>
+                    <pre className="code-line">    context,</pre>
+                    <pre className="code-line">    maxTokens: 1024,</pre>
+                    <pre className="code-line">    temperature: 0.7</pre>
+                    <pre className="code-line">  &#125;);</pre>
+                    <pre className="code-line">  </pre>
+                    <pre className="code-line">  <span className="code-const">return</span> response;</pre>
+                    <pre className="code-function">&#125;</pre>
                   </div>
                 </div>
               </div>
-            </div>
-          </section>
-
-          {/* Enhanced Use Cases Section */}
-          <section className="seamless-section animated-bg relative overflow-hidden">
-            <div className="section-content">
-              <div className="max-w-6xl mx-auto relative z-10">
-                <div className="text-center mb-16 sm:mb-20 stagger-item">
-                  <h2 className="text-white text-4xl sm:text-5xl font-bold leading-tight tracking-tight mb-6">
-                    Build AI Apps for <span className="bg-gradient-to-r from-emerald-400 via-blue-500 to-purple-500 bg-clip-text text-transparent">Any Use Case</span>
-                  </h2>
-                  <p className="text-gray-300 text-lg sm:text-xl leading-relaxed max-w-3xl mx-auto">
-                    LakeNine empowers you to create AI apps for a wide range of applications, from internal tools to customer-facing products.
-                  </p>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 sm:gap-10">
-                  <div className="glass-card p-6 stagger-item group">
-                    <div className="image-overlay rounded-2xl overflow-hidden mb-6">
-                      <Image
-                        src="https://images.unsplash.com/photo-1551434678-e076c223a692?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
-                        alt="Internal AI Tools Dashboard"
-                        width={400}
-                        height={250}
-                        className="w-full aspect-[16/10] object-cover transition-transform duration-500 group-hover:scale-110"
-                      />
-                    </div>
-                    <div>
-                      <h3 className="text-white text-xl font-bold leading-normal mb-3 group-hover:text-blue-400 transition-colors duration-300">Internal Tools</h3>
-                      <p className="text-gray-300 text-base leading-relaxed">Automate tasks and improve efficiency with AI-powered internal tools. Streamline workflows and boost productivity across your organization.</p>
-                    </div>
-                  </div>
-                  
-                  <div className="glass-card p-6 stagger-item group">
-                    <div className="image-overlay rounded-2xl overflow-hidden mb-6">
-                      <Image
-                        src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80"
-                        alt="Customer-facing AI Applications"
-                        width={400}
-                        height={250}
-                        className="w-full aspect-[16/10] object-cover transition-transform duration-500 group-hover:scale-110"
-                      />
-                    </div>
-                    <div>
-                      <h3 className="text-white text-xl font-bold leading-normal mb-3 group-hover:text-purple-400 transition-colors duration-300">Customer-Facing Apps</h3>
-                      <p className="text-gray-300 text-base leading-relaxed">Enhance customer experiences with AI-driven features and personalized interactions. Build engaging applications that delight your users.</p>
-                    </div>
-                  </div>
-                  
-                  <div className="glass-card p-6 stagger-item group">
-                    <div className="image-overlay rounded-2xl overflow-hidden mb-6">
-                      <Image
-                        src="https://images.unsplash.com/photo-1518186285589-2f7649de83e0?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2274&q=80"
-                        alt="AI-powered Workflow Automation"
-                        width={400}
-                        height={250}
-                        className="w-full aspect-[16/10] object-cover transition-transform duration-500 group-hover:scale-110"
-                      />
-                    </div>
-                    <div>
-                      <h3 className="text-white text-xl font-bold leading-normal mb-3 group-hover:text-emerald-400 transition-colors duration-300">AI-Powered Workflows</h3>
-                      <p className="text-gray-300 text-base leading-relaxed">Streamline processes and automate workflows with intelligent AI solutions. Transform complex operations into seamless experiences.</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Enhanced CTA Section */}
-          <section className="seamless-section animated-bg relative overflow-hidden">
-            <div className="section-content">
-              <div className="max-w-4xl mx-auto text-center relative z-10">
-                <div className="premium-glass p-12 sm:p-16">
-                  <h2 className="text-white text-4xl sm:text-5xl font-bold leading-tight tracking-tight mb-6">
-                    Get Started with <span className="bg-gradient-to-r from-blue-400 via-purple-500 to-emerald-400 bg-clip-text text-transparent">LakeNine</span> Today
-                  </h2>
-                  <p className="text-gray-300 text-lg sm:text-xl leading-relaxed mb-12 max-w-2xl mx-auto">
-                    Join thousands of developers building the future of AI apps. Start creating powerful applications in minutes, not months.
-                  </p>
-                  <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                    <Link href="/studio" className="glass-button inline-flex min-w-[180px] cursor-pointer items-center justify-center overflow-hidden rounded-2xl h-16 px-10 text-white text-xl font-bold leading-normal tracking-[0.015em] transform hover:scale-105 transition-all duration-300">
-                      <span className="truncate">Start Building Free</span>
-                      <svg className="ml-3 w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                      </svg>
-                    </Link>
-                    <Link href="#" className="inline-flex min-w-[180px] cursor-pointer items-center justify-center overflow-hidden rounded-2xl h-16 px-10 border border-transparent text-white text-xl font-medium leading-normal tracking-[0.015em] hover:bg-white/10 transition-all duration-300">
-                      <span className="truncate">View Documentation</span>
-                    </Link>
-                  </div>
-                  <div className="mt-12 flex items-center justify-center gap-8 text-gray-400">
-                    <div className="flex items-center gap-2">
-                      <svg className="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                      <span className="text-sm">No credit card required</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <svg className="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                      <span className="text-sm">Free forever plan</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <svg className="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                      <span className="text-sm">Deploy in seconds</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-        </main>
-
-        <footer className="footer-glass">
-          <div className="section-content">
-            <div className="max-w-5xl mx-auto">
-              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-8 mb-10">
-                <div>
-                  <h5 className="text-white font-semibold mb-3">Product</h5>
-                  <ul className="space-y-2">
-                    <li><Link href="#" className="text-gray-400 hover:text-blue-400 text-sm transition-colors">Features</Link></li>
-                    <li><Link href="#" className="text-gray-400 hover:text-blue-400 text-sm transition-colors">Integrations</Link></li>
-                    <li><Link href="#" className="text-gray-400 hover:text-blue-400 text-sm transition-colors">Pricing</Link></li>
-                    <li><Link href="#" className="text-gray-400 hover:text-blue-400 text-sm transition-colors">Changelog</Link></li>
-                  </ul>
-                </div>
-                
-                <div>
-                  <h5 className="text-white font-semibold mb-3">Solutions</h5>
-                  <ul className="space-y-2">
-                    <li><Link href="#" className="text-gray-400 hover:text-blue-400 text-sm transition-colors">For Startups</Link></li>
-                    <li><Link href="#" className="text-gray-400 hover:text-blue-400 text-sm transition-colors">For Enterprises</Link></li>
-                    <li><Link href="#" className="text-gray-400 hover:text-blue-400 text-sm transition-colors">Case Studies</Link></li>
-                  </ul>
-                </div>
-                
-                <div>
-                  <h5 className="text-white font-semibold mb-3">Resources</h5>
-                  <ul className="space-y-2">
-                    <li><Link href="#" className="text-gray-400 hover:text-blue-400 text-sm transition-colors">Documentation</Link></li>
-                    <li><Link href="#" className="text-gray-400 hover:text-blue-400 text-sm transition-colors">API Reference</Link></li>
-                    <li><Link href="#" className="text-gray-400 hover:text-blue-400 text-sm transition-colors">Blog</Link></li>
-                    <li><Link href="#" className="text-gray-400 hover:text-blue-400 text-sm transition-colors">Tutorials</Link></li>
-                  </ul>
-                </div>
-                
-                <div>
-                  <h5 className="text-white font-semibold mb-3">Company</h5>
-                  <ul className="space-y-2">
-                    <li><Link href="#" className="text-gray-400 hover:text-blue-400 text-sm transition-colors">About Us</Link></li>
-                    <li><Link href="#" className="text-gray-400 hover:text-blue-400 text-sm transition-colors">Careers</Link></li>
-                    <li><Link href="#" className="text-gray-400 hover:text-blue-400 text-sm transition-colors">Contact Us</Link></li>
-                  </ul>
-                </div>
-                
-                <div className="col-span-2 sm:col-span-4 lg:col-span-1">
-                  <h5 className="text-white font-semibold mb-3">Community</h5>
-                  <ul className="space-y-2">
-                    <li><Link href="#" className="text-gray-400 hover:text-blue-400 text-sm transition-colors">Forum</Link></li>
-                    <li><Link href="#" className="text-gray-400 hover:text-blue-400 text-sm transition-colors">Discord</Link></li>
-                    <li><Link href="#" className="text-gray-400 hover:text-blue-400 text-sm transition-colors">Events</Link></li>
-                  </ul>
-                </div>
-              </div>
-              
-              <div className="border-t border-white/10 pt-8 flex flex-col sm:flex-row items-center justify-between">
-                <p className="text-gray-500 text-sm mb-4 sm:mb-0">© 2025 LakeNine. All rights reserved.</p>
-                <div className="flex gap-5">
-                  <Link href="#" className="text-gray-500 hover:text-blue-400 transition-colors">
-                    <svg fill="currentColor" height="20px" viewBox="0 0 256 256" width="20px" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M247.39,68.94A8,8,0,0,0,240,64H209.57A48.66,48.66,0,0,0,168.1,40a46.91,46.91,0,0,0-33.75,13.7A47.9,47.9,0,0,0,120,88v6.09C79.74,83.47,46.81,50.72,46.46,50.37a8,8,0,0,0-13.65,4.92c-4.31,47.79,9.57,79.77,22,98.18a110.93,110.93,0,0,0,21.88,24.2c-15.23,17.53-39.21,26.74-39.47,26.84a8,8,0,0,0-3.85,11.93c.75,1.12,3.75,5.05,11.08,8.72C53.51,229.7,65.48,232,80,232c70.67,0,129.72-54.42,135.75-124.44l29.91-29.9A8,8,0,0,0,247.39,68.94Zm-45,29.41a8,8,0,0,0-2.32,5.14C196,166.58,143.28,216,80,216c-10.56,0-18-1.4-23.22-3.08,11.51-6.25,27.56-17,37.88-32.48A8,8,0,0,0,92,169.08c-.47-.27-43.91-26.34-44-96,16,13,45.25,33.17,78.67,38.79A8,8,0,0,0,136,104V88a32,32,0,0,1,9.6-22.92A30.94,30.94,0,0,1,167.9,56c12.66.16,24.49,7.88,29.44,19.21A8,8,0,0,0,204.67,80h16Z"></path>
-                    </svg>
-                  </Link>
-                  <Link href="#" className="text-gray-500 hover:text-blue-400 transition-colors">
-                    <svg fill="currentColor" height="20px" viewBox="0 0 256 256" width="20px" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M208.31,75.68A59.78,59.78,0,0,0,202.93,28,8,8,0,0,0,196,24a59.75,59.75,0,0,0-48,24H124A59.75,59.75,0,0,0,76,24a8,8,0,0,0-6.93,4,59.78,59.78,0,0,0-5.38,47.68A58.14,58.14,0,0,0,56,104v8a56.06,56.06,0,0,0,48.44,55.47A39.8,39.8,0,0,0,96,192v8H72a24,24,0,0,1-24-24A40,40,0,0,0,8,136a8,8,0,0,0,0,16,24,24,0,0,1,24,24,40,40,0,0,0,40,40H96v16a8,8,0,0,0,16,0V192a24,24,0,0,1,48,0v40a8,8,0,0,0,16,0V192a39.8,39.8,0,0,0-8.44-24.53A56.06,56.06,0,0,0,216,112v-8A58.14,58.14,0,0,0,208.31,75.68ZM200,112a40,40,0,0,1-40,40H112a40,40,0,0,1-40-40v-8a41.74,41.74,0,0,1,6.9-22.48A8,8,0,0,0,80,73.83a43.81,43.81,0,0,1,.79-33.58,43.88,43.88,0,0,1,32.32,20.06A8,8,0,0,0,119.82,64h32.35a8,8,0,0,0,6.74-3.69,43.87,43.87,0,0,1,32.32-20.06A43.81,43.81,0,0,1,192,73.83a8.09,8.09,0,0,0,1,7.65A41.72,41.72,0,0,1,200,104Z"></path>
-                    </svg>
-                  </Link>
-                  <Link href="#" className="text-gray-500 hover:text-blue-400 transition-colors">
-                    <svg fill="currentColor" height="20px" viewBox="0 0 256 256" width="20px" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M216,24H40A16,16,0,0,0,24,40V216a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V40A16,16,0,0,0,216,24Zm0,192H40V40H216V216ZM96,112v64a8,8,0,0,1-16,0V112a8,8,0,0,1,16,0Zm88,28v36a8,8,0,0,1-16,0V140a20,20,0,0,0-40,0v36a8,8,0,0,1-16,0V112a8,8,0,0,1,15.79-1.78A36,36,0,0,1,184,140ZM100,84A12,12,0,1,1,88,72,12,12,0,0,1,100,84Z"></path>
-                    </svg>
-                  </Link>
+              <div className="ai-suggestion">
+                <div className="flex items-center space-x-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <span className="text-sm">AI suggestions ready</span>
                 </div>
               </div>
             </div>
           </div>
-        </footer>
-      </div>
+        </div>
+      </section>
+      
+      {/* Features Section */}
+      <section className="features-section">
+        <div className="container mx-auto px-6">
+          <div className="section-header">
+            <h2 className="section-title">Powerful Features</h2>
+            <p className="section-description">Our editor combines cutting-edge AI with a sleek interface to provide the most productive coding experience.</p>
+          </div>
+          
+          <div className="features-grid">
+            {[
+              {
+                icon: (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  </svg>
+                ),
+                title: "AI Code Completion",
+                description: "Intelligent suggestions that understand your codebase and help you write better code faster."
+              },
+              {
+                icon: (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                ),
+                title: "Natural Language Commands",
+                description: "Simply describe what you want to do, and our AI will generate the code for you."
+              },
+              {
+                icon: (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                  </svg>
+                ),
+                title: "Smart Refactoring",
+                description: "Automatically improve your code structure and readability with AI-powered refactoring tools."
+              },
+              {
+                icon: (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                ),
+                title: "Advanced Security",
+                description: "Built-in vulnerability detection and security recommendations as you code."
+              },
+              {
+                icon: (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                ),
+                title: "Performance Optimization",
+                description: "Identify and fix performance bottlenecks with intelligent suggestions."
+              },
+              {
+                icon: (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                ),
+                title: "Collaborative Editing",
+                description: "Real-time collaboration with team members, enhanced by AI assistance for everyone."
+              }
+            ].map((feature, index) => (
+              <div key={index} className="feature-card">
+                <div className="feature-icon">
+                  {feature.icon}
+                </div>
+                <h3 className="feature-title">{feature.title}</h3>
+                <p className="feature-description">{feature.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+      
+      {/* Testimonials */}
+      <section className="testimonials-section">
+        <div className="testimonial-glow" />
+        <div className="container mx-auto px-6">
+          <div className="section-header">
+            <h2 className="section-title">Loved by Developers</h2>
+            <p className="section-description">See what developers around the world are saying about our AI-powered editor.</p>
+          </div>
+          
+          <div className="testimonials-grid">
+            {[
+              {
+                name: "Sarah Chen",
+                title: "Senior Developer @ Spotify",
+                avatar: "S",
+                avatarColor: "from-blue-400 to-purple-500",
+                content: "This editor has completely transformed my workflow. The AI suggestions are incredibly accurate and have saved me countless hours of debugging."
+              },
+              {
+                name: "Michael Rodriguez",
+                title: "Lead Engineer @ Airbnb",
+                avatar: "M",
+                avatarColor: "from-green-400 to-blue-500",
+                content: "The natural language commands feature is a game-changer. I can describe complex operations and the AI understands exactly what I need."
+              },
+              {
+                name: "Aisha Patel",
+                title: "CTO @ TechStart",
+                avatar: "A",
+                avatarColor: "from-pink-400 to-red-500",
+                content: "Our entire development team switched to this editor and we've seen a 40% increase in productivity. The collaborative features are exceptional."
+              }
+            ].map((testimonial, index) => (
+              <div key={index} className="testimonial-card">
+                <div className="testimonial-header">
+                  <div className={`testimonial-avatar bg-gradient-to-br ${testimonial.avatarColor}`}>
+                    {testimonial.avatar}
+                  </div>
+                  <div className="ml-4">
+                    <h4 className="font-semibold">{testimonial.name}</h4>
+                    <p className="text-sm text-white/60">{testimonial.title}</p>
+                  </div>
+                </div>
+                <p className="testimonial-content">{testimonial.content}</p>
+                <div className="testimonial-rating">
+                  {[...Array(5)].map((_, i) => (
+                    <StarIcon key={i} />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+      
+      {/* CTA Section */}
+      <section className="cta-section">
+        <div className="container mx-auto px-6">
+          <div className="cta-card">
+            <div className="cta-glow-purple" />
+            <div className="cta-glow-blue" />
+            
+            <div className="cta-content">
+              <div className="md:w-2/3 mb-8 md:mb-0">
+                <h2 className="cta-title">Ready to code smarter?</h2>
+                <p className="cta-description">
+                  Join thousands of developers who are writing better code faster with our AI-powered editor.
+                </p>
+                <div className="cta-buttons">
+                  <button className="btn-gradient">Download Now</button>
+                  <button className="btn-glass demo-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Schedule Demo
+                  </button>
+                </div>
+              </div>
+              <div className="pricing-card">
+                <div className="pricing-content">
+                  <h3 className="pricing-title">Pro Version</h3>
+                  <p className="pricing-subtitle">Unlock all features</p>
+                  <div className="pricing-amount">100 INR<span className="pricing-period">/month</span></div>
+                  <button className="pricing-button">Get Started</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      {/* Footer */}
+      <footer className="footer">
+        <div className="container mx-auto px-6">
+          <div className="footer-content">
+            <div className="footer-brand">
+              <div className="footer-logo">
+                <div className="logo">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
+                <span className="text-xl font-bold">LakeNine</span>
+              </div>
+              <p className="footer-description">The AI-first code editor for the modern developer.</p>
+              <div className="social-links">
+                {['instagram', 'twitter', 'github'].map((social, index) => (
+                  <a key={index} href="#" className="social-link">
+                    <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      {social === 'instagram' && (
+                        <path fillRule="evenodd" d="M12.315 2c2.43 0 2.784.013 3.808.06 1.064.049 1.791.218 2.427.465a4.902 4.902 0 011.772 1.153 4.902 4.902 0 011.153 1.772c.247.636.416 1.363.465 2.427.048 1.067.06 1.407.06 4.123v.08c0 2.643-.012 2.987-.06 4.043-.049 1.064-.218 1.791-.465 2.427a4.902 4.902 0 01-1.153 1.772 4.902 4.902 0 01-1.772 1.153c-.636.247-1.363.416-2.427.465-1.067.048-1.407.06-4.123.06h-.08c-2.643 0-2.987-.012-4.043-.06-1.064-.049-1.791-.218-2.427-.465a4.902 4.902 0 01-1.772-1.153 4.902 4.902 0 01-1.153-1.772c-.247-.636-.416-1.363-.465-2.427-.047-1.024-.06-1.379-.06-3.808v-.63c0-2.43.013-2.784.06-3.808.049-1.064.218-1.791.465-2.427a4.902 4.902 0 011.153-1.772A4.902 4.902 0 015.45 2.525c.636-.247 1.363-.416 2.427-.465C8.901 2.013 9.256 2 11.685 2h.63zm-.081 1.802h-.468c-2.456 0-2.784.011-3.807.058-.975.045-1.504.207-1.857.344-.467.182-.8.398-1.15.748-.35.35-.566.683-.748 1.15-.137.353-.3.882-.344 1.857-.047 1.023-.058 1.351-.058 3.807v.468c0 2.456.011 2.784.058 3.807.045.975.207 1.504.344 1.857.182.466.399.8.748 1.15.35.35.683.566 1.15.748.353.137.882.3 1.857.344 1.054.048 1.37.058 4.041.058h.08c2.597 0 2.917-.01 3.96-.058.976-.045 1.505-.207 1.858-.344.466-.182.8-.398 1.15-.748.35-.35.566-.683.748-1.15.137-.353.3-.882.344-1.857.048-1.055.058-1.37.058-4.041v-.08c0-2.597-.01-2.917-.058-3.96-.045-.976-.207-1.505-.344-1.858a3.097 3.097 0 00-.748-1.15 3.098 3.098 0 00-1.15-.748c-.353-.137-.882-.3-1.857-.344-1.023-.047-1.351-.058-3.807-.058zM12 6.865a5.135 5.135 0 110 10.27 5.135 5.135 0 010-10.27zm0 1.802a3.333 3.333 0 100 6.666 3.333 3.333 0 000-6.666zm5.338-3.205a1.2 1.2 0 110 2.4 1.2 1.2 0 010-2.4z" clipRule="evenodd" />
+                      )}
+                      {social === 'twitter' && (
+                        <path d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84" />
+                      )}
+                      {social === 'github' && (
+                        <path fillRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clipRule="evenodd" />
+                      )}
+                    </svg>
+                  </a>
+                ))}
+              </div>
+            </div>
+            
+            {[
+              {
+                title: "Product",
+                links: ["Features", "Pricing", "Download", "Updates"]
+              },
+              {
+                title: "Resources",
+                links: ["Documentation", "Tutorials", "Blog", "Community"]
+              },
+              {
+                title: "Company",
+                links: ["About", "Careers", "Contact", "Press Kit"]
+              }
+            ].map((section, index) => (
+              <div key={index} className="footer-section">
+                <h4 className="footer-section-title">{section.title}</h4>
+                <ul className="footer-links">
+                  {section.links.map((link, linkIndex) => (
+                    <li key={linkIndex}>
+                      <a href="#" className="footer-link">{link}</a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+          
+          <div className="footer-bottom">
+            <p className="footer-copyright">© 2025 LakeNine. All rights reserved.</p>
+            <div className="footer-legal">
+              <a href="#" className="footer-link">Privacy Policy</a>
+              <a href="#" className="footer-link">Terms of Service</a>
+              <a href="#" className="footer-link">Cookie Policy</a>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
-}
+};
+
+export default page;

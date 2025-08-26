@@ -74,8 +74,10 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (user) {
-      const redirectPath = localStorage.getItem('authRedirectPath') || '/';
+      console.log("Login page: User is authenticated, redirecting...");
+      const redirectPath = localStorage.getItem('authRedirectPath') || '/studio';
       localStorage.removeItem('authRedirectPath');
+      console.log("Login page: Redirecting to:", redirectPath);
       router.push(redirectPath);
     }
   }, [user, router]);
@@ -97,9 +99,15 @@ export default function LoginPage() {
     }
 
     try {
+      console.log("Login page: Attempting login...");
       await loginWithEmail(email, pwd);
       toast.success("Logged in successfully!");
-      router.push("/");
+      
+      // Check for redirect path or default to studio
+      const redirectPath = localStorage.getItem('authRedirectPath') || '/studio';
+      localStorage.removeItem('authRedirectPath');
+      console.log("Login page: Login successful, redirecting to:", redirectPath);
+      router.push(redirectPath);
     } catch (err: any) {
       // Provide user-friendly error messages
       let errorMessage = "Login failed. Please try again.";
@@ -129,7 +137,12 @@ export default function LoginPage() {
       const result = await signInWithGoogle();
       if (result?.user) {
         toast.success("Signed in with Google successfully!");
-        router.push("/");
+        
+        // Check for redirect path or default to studio
+        const redirectPath = localStorage.getItem('authRedirectPath') || '/studio';
+        localStorage.removeItem('authRedirectPath');
+        console.log("Login page: Google login successful, redirecting to:", redirectPath);
+        router.push(redirectPath);
       }
     } catch (err: any) {
       let errorMessage = "Google sign-in failed. Please try again.";

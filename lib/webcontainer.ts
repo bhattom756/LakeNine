@@ -293,7 +293,7 @@ export async function writeFile(path: string, content: string): Promise<void> {
 }
 
 // Write multiple files to WebContainer
-export async function writeMultipleFiles(files: Record<string, string>): Promise<void> {
+export async function writeMultipleFiles(files: Record<string, any>): Promise<void> {
   if (!webcontainerInstance) {
     throw new Error('WebContainer not initialized');
   }
@@ -301,19 +301,40 @@ export async function writeMultipleFiles(files: Record<string, string>): Promise
   console.log(`📝 Writing ${Object.keys(files).length} files to WebContainer...`);
   
   try {
-    // Transform files to proper WebContainer structure
-    const transformedFiles = transformFilesToWebContainerStructure(files);
+    // First, ensure all content is strings and transform the file structure
+    const stringFiles: Record<string, string> = {};
+    for (const [path, content] of Object.entries(files)) {
+      if (typeof content === 'string') {
+        stringFiles[path] = content;
+      } else if (typeof content === 'object' && content !== null) {
+        stringFiles[path] = JSON.stringify(content, null, 2);
+      } else {
+        stringFiles[path] = String(content || '');
+      }
+    }
+    
+    // Transform files to fix import paths and structure
+    const transformedFiles = transformFilesToWebContainerStructure(stringFiles);
     
     // Write files individually to handle nested structure
-    for (const [filePath, content] of Object.entries(files)) {
-      // Convert paths like "components/Header.jsx" to "src/Header.jsx" (flat structure)
-      const adjustedPath = adjustFilePath(filePath);
+    for (const [filePath, content] of Object.entries(transformedFiles)) {
+      // Create directory if it doesn't exist
+      const dirPath = filePath.includes('/') ? filePath.substring(0, filePath.lastIndexOf('/')) : '';
+      if (dirPath) {
+        try {
+          await webcontainerInstance.fs.mkdir(dirPath, { recursive: true });
+        } catch (dirError) {
+          // Directory might already exist, ignore error
+          console.log(`📁 Directory ${dirPath} handling:`, dirError);
+        }
+      }
       
       try {
-        await webcontainerInstance.fs.writeFile(adjustedPath, content);
-        console.log(`✅ Written: ${adjustedPath}`);
+        await webcontainerInstance.fs.writeFile(filePath, content);
+        console.log(`✅ Written: ${filePath} (${content.length} chars)`);
       } catch (error) {
-        console.error(`❌ Failed to write ${adjustedPath}:`, error);
+        console.error(`❌ Failed to write ${filePath}:`, error);
+        console.error(`Content preview:`, content.substring(0, 100));
       }
     }
     
@@ -329,16 +350,39 @@ function adjustFilePath(originalPath: string): string {
   // Remove leading slash if present
   let path = originalPath.startsWith('/') ? originalPath.slice(1) : originalPath;
   
+  // Prevent path duplication - if path already starts with src/, don't add it again
+  if (path.startsWith('src/')) {
+    return path;
+  }
+  
   // Handle different file types and adjust paths
   if (path.startsWith('components/')) {
-    // Move components to src/ directory
-    path = path.replace('components/', 'src/');
-  } else if (path === 'App.jsx' || path === 'main.jsx') {
+    // Move components to src/ directory (flat structure)
+    const fileName = path.replace('components/', '');
+    path = `src/${fileName}`;
+  } else if (path.startsWith('pages/')) {
+    // Convert Next.js pages to Vite+React components in src/
+    const fileName = path.replace('pages/', '');
+    
+    // Special handling for Next.js index files
+    if (fileName === 'index.js' || fileName === 'index.jsx') {
+      path = 'src/Home.jsx'; // Convert index to Home component
+    } else {
+      // Convert other pages to components
+      const componentName = fileName.replace(/\.(js|jsx)$/, '.jsx');
+      path = `src/${componentName}`;
+    }
+  } else if (path === 'App.jsx' || path === 'main.jsx' || path === 'index.css') {
     // Main app files go to src/
     path = `src/${path}`;
   } else if (path.endsWith('.jsx') || path.endsWith('.tsx') || path.endsWith('.js') || path.endsWith('.ts')) {
-    // Other component files go to src/ unless they're config files
-    if (!['vite.config.js', 'tailwind.config.js', 'postcss.config.js'].includes(path)) {
+    // Other component/script files go to src/ unless they're config files
+    const configFiles = ['vite.config.js', 'tailwind.config.js', 'postcss.config.js', 'package.json'];
+    if (!configFiles.includes(path) && !path.includes('node_modules')) {
+      // Convert .js to .jsx for React components
+      if (path.endsWith('.js') && !configFiles.some(config => path.includes(config))) {
+        path = path.replace(/\.js$/, '.jsx');
+      }
       path = `src/${path}`;
     }
   }
@@ -350,30 +394,183 @@ function adjustFilePath(originalPath: string): string {
 function transformFilesToWebContainerStructure(files: Record<string, string>): Record<string, string> {
   const transformedFiles: Record<string, string> = {};
   
+  // First pass: determine what files exist and their new locations
+  const fileMapping: Record<string, string> = {};
+  for (const originalPath of Object.keys(files)) {
+    const adjustedPath = adjustFilePath(originalPath);
+    fileMapping[originalPath] = adjustedPath;
+  }
+  
   for (const [originalPath, content] of Object.entries(files)) {
     const adjustedPath = adjustFilePath(originalPath);
     
     // Fix import paths in the content
     let adjustedContent = content;
+    const originalContent = content;
     
-    // Fix relative imports for components moved to src/
-    if (adjustedPath.startsWith('src/') && originalPath.startsWith('components/')) {
-      // Update imports from './components/X' to './X'
-      adjustedContent = adjustedContent.replace(/from\s+['"]\.\.?\/components\//g, "from './");
-      adjustedContent = adjustedContent.replace(/import\s+['"]\.\.?\/components\//g, "import './");
+    // Handle Next.js to Vite conversion
+    if (originalPath.startsWith('pages/')) {
+      // Convert Next.js page to React component
+      adjustedContent = convertNextJSPageToReactComponent(adjustedContent, originalPath);
     }
     
-    // Fix App.jsx imports
-    if (adjustedPath === 'src/App.jsx') {
-      // Update component imports to work with flat src structure
-      adjustedContent = adjustedContent.replace(/from\s+['"]\.\/components\//g, "from './");
-      adjustedContent = adjustedContent.replace(/import\s+['"]\.\/components\//g, "import './");
+    // Debug: Log content before transformation if it contains problematic imports
+    if (adjustedContent.includes('./components/') || adjustedContent.includes('./pages/')) {
+      console.log(`🔍 Before transform (${originalPath}):`, adjustedContent.substring(0, 300));
+    }
+    
+    // Fix all import statements to work with flat src structure
+    // Handle both "from" and direct import patterns for components
+    adjustedContent = adjustedContent.replace(
+      /import\s+([^'"]+)\s+from\s+["']\.\/components\/([^"']+)["']/g,
+      (match, importName, componentName) => {
+        const cleanName = componentName.replace(/\.(jsx?|tsx?)$/, '');
+        const newImport = `import ${importName} from './${cleanName}'`;
+        console.log(`🔄 Transform: ${match} → ${newImport}`);
+        return newImport;
+      }
+    );
+    
+    // Also handle standalone from patterns
+    adjustedContent = adjustedContent.replace(
+      /from\s+["']\.\/components\/([^"']+)["']/g, 
+      (match, componentName) => {
+        const cleanName = componentName.replace(/\.(jsx?|tsx?)$/, '');
+        console.log(`🔄 Transform: ${match} → from './${cleanName}'`);
+        return `from './${cleanName}'`;
+      }
+    );
+    
+    // Fix imports from pages directory (convert to components)
+    adjustedContent = adjustedContent.replace(
+      /import\s+([^'"]+)\s+from\s+["']\.\/pages\/([^"']+)["']/g,
+      (match, importName, pageName) => {
+        let cleanName = pageName.replace(/\.(jsx?|tsx?)$/, '');
+        // Convert index to Home
+        if (cleanName === 'index') {
+          cleanName = 'Home';
+        }
+        const newImport = `import ${importName} from './${cleanName}'`;
+        console.log(`🔄 Transform: ${match} → ${newImport}`);
+        return newImport;
+      }
+    );
+    
+    // Also handle standalone from patterns for pages
+    adjustedContent = adjustedContent.replace(
+      /from\s+["']\.\/pages\/([^"']+)["']/g,
+      (match, pageName) => {
+        let cleanName = pageName.replace(/\.(jsx?|tsx?)$/, '');
+        // Convert index to Home
+        if (cleanName === 'index') {
+          cleanName = 'Home';
+        }
+        console.log(`🔄 Transform: ${match} → from './${cleanName}'`);
+        return `from './${cleanName}'`;
+      }
+    );
+    
+    // Fix imports from any nested directories to flat structure
+    adjustedContent = adjustedContent.replace(
+      /import\s+([^'"]+)\s+from\s+["']\.\/[^\/]+\/([^"']+)["']/g,
+      (match, importName, fileName) => {
+        const cleanName = fileName.replace(/\.(jsx?|tsx?)$/, '');
+        const newImport = `import ${importName} from './${cleanName}'`;
+        console.log(`🔄 Transform: ${match} → ${newImport}`);
+        return newImport;
+      }
+    );
+    
+    // Also handle standalone from patterns for nested directories
+    adjustedContent = adjustedContent.replace(
+      /from\s+["']\.\/[^\/]+\/([^"']+)["']/g,
+      (match, fileName) => {
+        const cleanName = fileName.replace(/\.(jsx?|tsx?)$/, '');
+        console.log(`🔄 Transform: ${match} → from './${cleanName}'`);
+        return `from './${cleanName}'`;
+      }
+    );
+    
+    // Fix relative imports that might be using '../' patterns
+    adjustedContent = adjustedContent.replace(
+      /from\s+['"]\.\.\/[^'"]*\/([^'"]+)['"]/g,
+      (match, fileName) => {
+        const cleanName = fileName.replace(/\.(jsx?|tsx?)$/, '');
+        console.log(`🔄 Transform: ${match} → from './${cleanName}'`);
+        return `from './${cleanName}'`;
+      }
+    );
+    
+    // Catch-all: Fix any remaining import with nested paths to flat structure
+    adjustedContent = adjustedContent.replace(
+      /import\s+([^'"]+)\s+from\s+["'][^"']*\/([^/"']+)["']/g,
+      (match, importName, fileName) => {
+        // Skip if it's already a flat import or an external package
+        if (!match.includes('./') || match.includes('node_modules')) {
+          return match;
+        }
+        const cleanName = fileName.replace(/\.(jsx?|tsx?)$/, '');
+        const newImport = `import ${importName} from './${cleanName}'`;
+        console.log(`🔄 Catch-all Transform: ${match} → ${newImport}`);
+        return newImport;
+      }
+    );
+    
+    // Fix any absolute path references to pages (not imports)
+    adjustedContent = adjustedContent.replace(
+      /["']pages\/([^"']+)["']/g,
+      (match, pageName) => {
+        let cleanName = pageName.replace(/\.(jsx?|tsx?)$/, '');
+        if (cleanName === 'index') {
+          cleanName = 'Home';
+        }
+        console.log(`🔄 Absolute path Transform: ${match} → './src/${cleanName}'`);
+        return `'./src/${cleanName}'`;
+      }
+    );
+    
+    if (adjustedContent !== originalContent) {
+      console.log(`🔄 File ${originalPath} → ${adjustedPath}: imports transformed`);
+    }
+    
+    // Debug: Log content after transformation if it still contains problematic imports
+    if (adjustedContent.includes('./components/') || adjustedContent.includes('./pages/')) {
+      console.log(`⚠️ After transform (${adjustedPath}) still has issues:`, adjustedContent.substring(0, 300));
     }
     
     transformedFiles[adjustedPath] = adjustedContent;
   }
   
   return transformedFiles;
+}
+
+// Helper function to convert Next.js page to React component
+function convertNextJSPageToReactComponent(content: string, originalPath: string): string {
+  let converted = content;
+  
+  // Add React import if not present
+  if (!converted.includes("import React")) {
+    converted = "import React from 'react';\n" + converted;
+  }
+  
+  // If this is an index page, rename the default export
+  if (originalPath.includes('index.js') || originalPath.includes('index.jsx')) {
+    // Replace export default with named component
+    converted = converted.replace(
+      /export\s+default\s+function\s+(\w+)/g,
+      'function Home'
+    );
+    
+    // Add export default at the end if not present
+    if (!converted.includes('export default')) {
+      converted += '\n\nexport default Home;';
+    } else {
+      // Replace existing export default
+      converted = converted.replace(/export\s+default\s+\w+;?/, 'export default Home;');
+    }
+  }
+  
+  return converted;
 }
 
 // Read file from WebContainer

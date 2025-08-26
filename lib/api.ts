@@ -1,5 +1,6 @@
 import { ChatResponse } from '../types/chat';
 import OpenAI from 'openai';
+import { getSystemPrompt } from './bolt-prompt';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -205,46 +206,6 @@ function detectWebsiteType(prompt: string): { type: string, isPlainHtml: boolean
 }
 
 // Build dynamic system prompt based on context
-function buildDynamicSystemPrompt(prompt: string): string {
-  const { type } = detectWebsiteType(prompt);
-  
-  return `
-You are a world-class frontend engineer and designer. 
-You generate complete, production-quality websites from a user\\'s prompt, using only the highest standards of modern web design (Apple/Google-level).
-
-Requirements:
-- Use Tailwind CSS for ALL projects, unless explicitly told otherwise. 
-- Follow Tailwind\\'s utility-first approach and mobile-first responsive design principles.
-- Use Tailwind\\'s built-in features for:
-  * Responsive design (sm:, md:, lg:, xl:)
-  * Dark mode support (dark:)
-  * Hover/focus states (hover:, focus:)
-  * Animations and transitions (animate-, transition-)
-  * Custom colors and gradients
-  * Modern UI effects (backdrop-blur, glassmorphism, etc.)
-- Apply animations to almost all components (but not excessively) using a library appropriate for the chosen framework (e.g., 'react-awesome-reveal' for React, or equivalent for other frameworks):
-  * Hero sections with Fade or Slide
-  * Feature cards with staggered Slide or Fade
-  * Testimonials with Zoom or Fade
-  * CTAs with Attention
-  * Images with Zoom or Fade
-  * Statistics with Bounce or Slide
-- All content must be realistic, domain-appropriate, and high-converting. No Lorem Ipsum.
-- All images must use the /*IMAGE:category*/ placeholder format.
-- The design must be visually stunning, responsive, and interactive.
-- Use semantic HTML5 elements with appropriate Tailwind classes.
-
-Output format (MANDATORY):
-# Project Plan
-<short, high-level plan>
-\\\`\\\`\\\`json
-{
-  "file_path_1": "file_content_1",
-  "file_path_2": "file_content_2",
-  // ... etc.
-  "package.json": "{\\"name\\": \\"my-project\\",\\"version\\": \\"1.0.0\\",\\"dependencies\\": {\\"tailwindcss\\": \\"^3.4.0\\"}}"
-}
-\\\`\\\`\\\`
-
-Do not include any other code blocks or explanations. Only output the plan and the JSON block.`;
+function buildDynamicSystemPrompt(prompt: string, useBoltPrompt: boolean = true): string {
+  return getSystemPrompt(useBoltPrompt);
 } 

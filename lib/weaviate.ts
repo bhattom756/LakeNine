@@ -8,7 +8,7 @@ interface ComponentData {
 }
 
 // Initialize Weaviate client with proper error handling
-const getWeaviateClient = () => {
+export const getWeaviateClient = () => {
   // Check for environment variables with the correct names
   if (!process.env.WEAVIATE_HOST || !process.env.WEAVIATE_API_KEY) {
     console.warn('Weaviate environment variables not set. Using fallback generation.');
@@ -63,17 +63,17 @@ export async function ensureWeaviateSchema() {
       description: 'UI components for RAG-enhanced website generation',
       properties: [
         {
-          name: 'componentType',
+          name: 'component_type',
           dataType: ['text'],
           description: 'Type of component (Hero Sections, Feature Sections, etc.)'
         },
         {
-          name: 'textSummary',
+          name: 'text_summary',
           dataType: ['text'],
           description: 'Brief description of the component variant'
         },
         {
-          name: 'classKeywords',
+          name: 'class_keywords',
           dataType: ['text[]'],
           description: 'CSS class keywords used in the component'
         },
@@ -102,13 +102,72 @@ export async function ensureWeaviateSchema() {
   }
 }
 
-// Store components from your sample.json with correct field mapping
-export async function storeComponentsInWeaviate(components: ComponentData[]) {
+// Function to reset schema if field names are wrong
+export async function resetWeaviateSchema() {
   try {
     const client = getWeaviateClient();
     if (!client) return false;
 
-    await ensureWeaviateSchema();
+    console.log('🔄 Resetting Weaviate schema...');
+    
+    // Delete existing class if it exists
+    try {
+      await client.schema.classDeleter().withClassName('WebComponent').do();
+      console.log('✅ Deleted existing WebComponent class');
+    } catch (error) {
+      console.log('ℹ️ WebComponent class did not exist or could not be deleted');
+    }
+
+    // Create new schema with correct field names
+    const schema = {
+      class: 'WebComponent',
+      description: 'UI components for RAG-enhanced website generation',
+      properties: [
+        {
+          name: 'component_type',
+          dataType: ['text'],
+          description: 'Type of component (Hero Sections, Feature Sections, etc.)'
+        },
+        {
+          name: 'text_summary',
+          dataType: ['text'],
+          description: 'Brief description of the component variant'
+        },
+        {
+          name: 'class_keywords',
+          dataType: ['text[]'],
+          description: 'CSS class keywords used in the component'
+        },
+        {
+          name: 'code',
+          dataType: ['text'],
+          description: 'Generated React/JSX code for the component'
+        }
+      ],
+      vectorizer: 'text2vec-openai',
+      moduleConfig: {
+        'text2vec-openai': {
+          model: 'ada',
+          modelVersion: '002',
+          type: 'text'
+        }
+      }
+    };
+
+    await client.schema.classCreator().withClass(schema).do();
+    console.log('✅ Created new WebComponent class with correct field names');
+    return true;
+  } catch (error) {
+    console.error('❌ Error resetting Weaviate schema:', error);
+    return false;
+  }
+}
+
+// Store components from your knowledge_base.json with correct field mapping
+export async function storeComponentsInWeaviate(components: ComponentData[]) {
+  try {
+    const client = getWeaviateClient();
+    if (!client) return false;
 
     console.log(`📦 Storing ${components.length} components in Weaviate...`);
 
@@ -117,16 +176,13 @@ export async function storeComponentsInWeaviate(components: ComponentData[]) {
     let batchSize = 0;
 
     for (const component of components) {
-      // Generate React code based on component
-      const reactCode = generateReactComponent(component);
-      
+      // Map knowledge_base.json fields to your Weaviate schema fields
       const weaviateObject = {
         class: 'WebComponent',
         properties: {
-          componentType: component.component_type,       // Map component_type -> componentType
-          textSummary: component.text_summary,          // Map text_summary -> textSummary  
-          classKeywords: component.class_keywords,      // Map class_keywords -> classKeywords
-          code: reactCode
+          type: component.component_type,                                    // component_type -> type
+          description: component.text_summary,                               // text_summary -> description
+          code: component.class_keywords.join(' ')                          // class_keywords array -> code string
         }
       };
 
@@ -366,149 +422,151 @@ export default ${componentName};`
   return templates[component_type] || templates['Hero Sections'];
 }
 
-// Enhanced retrieval with better error handling and timeouts
+// Enhanced retrieval with correct field mapping
 export async function retrieveComponents(query: string, limit: number = 10) {
   try {
     const client = getWeaviateClient();
     if (!client) return [];
     
+    console.log('🔍 Retrieving components from Weaviate...');
+    
+    // Use your actual Weaviate schema fields: type, description, code
     const response = await withTimeout(
       client.graphql
-      .get()
-      .withClassName('WebComponent')
-        .withFields('componentType textSummary classKeywords code')  // Use correct field names
-      .withNearText({ concepts: [query] })
-      .withLimit(limit)
+        .get()
+        .withClassName('WebComponent')
+        .withFields('type description code')
+        .withNearText({ concepts: [query] })
+        .withLimit(limit)
         .do(),
-      8000 // 8 second timeout
+      8000
     );
     
-    return response.data?.Get?.WebComponent || [];
+    const components = response?.data?.Get?.WebComponent || [];
+    console.log(`✅ Retrieved ${components.length} components for query: "${query}"`);
+    
+    return components;
+    
   } catch (error) {
-    console.error('Error retrieving components from Weaviate:', error);
+    console.error('Error in retrieveComponents:', error instanceof Error ? error.message : String(error));
     return [];
   }
 }
 
-// Enhanced component retrieval by type with better matching
-export async function retrieveComponentsByType(query: string, componentTypes: string[], limit: number = 3) {
+// Enhanced component retrieval by type with correct field mapping
+export async function retrieveComponentsByType(query: string, component_types: string[], limit: number = 3) {
   try {
     const client = getWeaviateClient();
     if (!client) return {};
 
     const results: Record<string, any[]> = {};
     
-    for (const type of componentTypes) {
+    for (const type of component_types) {
       try {
+        console.log(`🔍 Searching for ${type} components...`);
+        
         const response = await withTimeout(
           client.graphql
-      .get()
-      .withClassName('WebComponent')
-            .withFields('componentType textSummary classKeywords code')  // Use correct field names
-      .withWhere({
-              path: ['componentType'],  // Use correct field name
+            .get()
+            .withClassName('WebComponent')
+            .withFields('type description code')
+            .withWhere({
+              path: ['type'],
               operator: 'Equal',
               valueText: type
-      })
+            })
             .withNearText({ concepts: [query, type] })
-      .withLimit(limit)
+            .withLimit(limit)
             .do(),
-          6000 // 8 second timeout for individual queries
+          6000
         );
         
         results[type] = response.data?.Get?.WebComponent || [];
         console.log(`✅ Retrieved ${results[type].length} ${type} components`);
       } catch (error) {
-        console.error(`❌ Error retrieving ${type} components:`, error);
+        console.error(`❌ Error retrieving ${type} components:`, error instanceof Error ? error.message : String(error));
         results[type] = [];
       }
     }
     
     return results;
   } catch (error) {
-    console.error('Error in retrieveComponentsByType:', error);
+    console.error('Error in retrieveComponentsByType:', error instanceof Error ? error.message : String(error));
     return {};
   }
 }
 
-// Enhanced website component retrieval optimized for your components.json structure
-export async function getWebsiteComponents(query: string) {
+// Enhanced component retrieval with better vectorization
+export async function getWebsiteComponents(
+  query: string,
+  component_types: string[] = [
+    // Updated to match actual types in your Weaviate data
+    'Navbars', 'Reviews', 'Hero Sections', 'Feature Sections', 'CTA Sections', 'Bento Grids', 
+    'Pricing Sections', 'Header Sections', 'Newsletter Sections', 'Stats', 'Testimonials', 
+    'Blog Sections', 'Contact Sections', 'Team Sections', 'Content Sections', 'Logo Clouds', 
+    'FAQs', 'Footers', 'Headers', 'Flyout Menus', 'Banners', '404 Pages', 'Stacked Layouts',
+    'Sidebar Layouts', 'Multi-Column Layouts'
+  ]
+): Promise<any[]> {
   try {
-    const client = getWeaviateClient();
-    if (!client) {
-      console.log('Weaviate client not available, returning empty components');
-      return { components: {}, available: false };
+    console.log('🔍 Starting Weaviate component retrieval...');
+    
+    // Try to retrieve specific component types first
+    const typeResults = await retrieveComponentsByType(query, component_types, 2);
+    let allComponents: any[] = [];
+    
+    // Collect components from all types
+    for (const [type, components] of Object.entries(typeResults)) {
+      if (components && Array.isArray(components)) {
+        allComponents.push(...components);
+        console.log(`✅ Retrieved ${components.length} ${type} components`);
+      } else {
+        console.log(`❌ Error retrieving ${type} components:`, components);
+      }
     }
-
-    // Component types from your sample.json
-    const componentTypes = [
-      'Hero Sections',
-      'Feature Sections', 
-      'CTA Sections',
-      'Bento Grids',
-      'Pricing Sections',
-      'Header Sections',
-      'Newsletter Sections',
-      'Stats',
-      'Testimonials',
-      'Blog Sections',
-      'Contact Sections',
-      'Team Sections',
-      'Content Sections',
-      'Logo Clouds',
-      'FAQs',
-      'Footers',
-      'Headers',
-      'Flyout Menus',
-      'Banners',
-      '404 Pages',
-      'Stacked Layouts',
-      'Sidebar Layouts',
-      'Multi-Column Layouts'
-    ];
-
-    // Retrieve components by type with enhanced matching
-    const componentResults = await retrieveComponentsByType(query, componentTypes, 2);
     
-    // Also get general relevant components
-    const generalComponents = await retrieveComponents(query, 5);
+    // If we don't have enough components, do a general search
+    if (allComponents.length < 5) {
+      console.log('🔍 Performing general component search...');
+      const generalResults = await retrieveComponents(query, 5);
+      
+      // Add general results, avoiding duplicates (using correct field names)
+      const existingIds = new Set(allComponents.map(c => `${c.type}-${c.description}`));
+      for (const component of generalResults) {
+        const id = `${component.type}-${component.description}`;
+        if (!existingIds.has(id)) {
+          allComponents.push(component);
+        }
+      }
+    }
     
-    const totalComponents = Object.values(componentResults).reduce((sum, arr) => sum + arr.length, 0) + generalComponents.length;
+    console.log(`✅ Total components retrieved: ${allComponents.length}`);
+    return allComponents;
     
-    console.log(`✅ Total components retrieved: ${totalComponents}`);
-    
-    return {
-      components: {
-        general: generalComponents,
-        ...componentResults
-      },
-      available: true,
-      totalComponents: totalComponents
-    };
   } catch (error) {
-    console.error('❌ Error getting website components:', error);
-    return { components: {}, available: false };
+    console.error('Error retrieving components from Weaviate:', error);
+    return [];
   }
 }
 
-// Initialize components from your sample.json file
+// Initialize components from your knowledge_base.json file
 export async function initializeComponentsFromFile() {
   try {
-    // Import components from your sample.json
+    // Import components from your knowledge_base.json
     const fs = await import('fs').then(m => m.promises);
     const path = await import('path');
     
-    const componentsPath = path.join(process.cwd(), 'sample.json');
+    const componentsPath = path.join(process.cwd(), 'knowledge_base.json');
     const componentsData = await fs.readFile(componentsPath, 'utf-8');
     const components: ComponentData[] = JSON.parse(componentsData);
     
-    console.log(`📁 Loading ${components.length} components from sample.json`);
+    console.log(`📁 Loading ${components.length} components from knowledge_base.json`);
     
-    // Store in Weaviate
+    // Store in Weaviate with correct field mapping
     const success = await storeComponentsInWeaviate(components);
     
     if (success) {
-      console.log('✅ Successfully initialized Weaviate with components from sample.json');
+      console.log('✅ Successfully initialized Weaviate with components from knowledge_base.json');
     } else {
       console.log('❌ Failed to initialize Weaviate with components');
     }
@@ -520,4 +578,4 @@ export async function initializeComponentsFromFile() {
   }
 }
 
-export { ComponentData };
+export type { ComponentData };
