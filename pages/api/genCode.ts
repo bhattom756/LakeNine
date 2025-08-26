@@ -794,6 +794,12 @@ function cleanCSSContent(cssContent: string): string {
   cleaned = cleaned.replace(/import\s+.*?from\s+['"][^'"]*['"];?\s*/g, '');
   cleaned = cleaned.replace(/export\s+.*?;?\s*/g, '');
   
+  // CRITICAL FIX: Remove orphaned braces that cause "Unexpected }" errors
+  cleaned = cleaned.replace(/^\s*\}\s*$/gm, ''); // Remove lines with only }
+  cleaned = cleaned.replace(/^\s*\{\s*$/gm, ''); // Remove lines with only {
+  cleaned = cleaned.replace(/\}\s*\}/g, '}'); // Remove duplicate closing braces
+  cleaned = cleaned.replace(/\{\s*\{/g, '{'); // Remove duplicate opening braces
+  
   // Fix @apply statements with invalid classes
   cleaned = cleaned.replace(/@apply\s+([^;]+);/g, (match, classes) => {
     const classList = classes.split(/\s+/);
@@ -804,10 +810,25 @@ function cleanCSSContent(cssContent: string): string {
     return `@apply ${validClasses.join(' ')};`;
   });
   
-  // Ensure CSS blocks are properly closed
-  cleaned = cleaned.replace(/\{\s*([^}]*)\s*(?!})/g, (match, content) => {
-    return `{${content}}`;
+  // Fix malformed CSS blocks - ensure proper structure and closing
+  cleaned = cleaned.replace(/([^{}\s]+)\s*\{\s*([^}]*)\s*\}/g, (match, selector, content) => {
+    if (!selector.trim() || selector.includes('@tailwind')) return match;
+    return `${selector.trim()} {\n  ${content.trim()}\n}`;
   });
+  
+  // CRITICAL: Ensure all opening braces have corresponding closing braces
+  const openBraces = (cleaned.match(/\{/g) || []).length;
+  const closeBraces = (cleaned.match(/\}/g) || []).length;
+  
+  if (openBraces > closeBraces) {
+    console.log(`🔧 FIXING: Adding ${openBraces - closeBraces} missing closing braces`);
+    cleaned += '\n' + '}'.repeat(openBraces - closeBraces);
+  } else if (closeBraces > openBraces) {
+    console.log(`🔧 FIXING: Removing ${closeBraces - openBraces} extra closing braces`);
+    for (let i = 0; i < closeBraces - openBraces; i++) {
+      cleaned = cleaned.replace(/\}\s*$/, '');
+    }
+  }
   
   // If it doesn't look like CSS, replace with basic Tailwind CSS
   if (!cleaned.includes('@tailwind') && !cleaned.includes('body') && !cleaned.includes(':root')) {
@@ -830,6 +851,26 @@ body {
 #root {
   width: 100%;
   min-height: 100vh;
+}`;
+  }
+  
+  // Final safety check - ensure the CSS is syntactically valid
+  const finalOpenBraces = (cleaned.match(/\{/g) || []).length;
+  const finalCloseBraces = (cleaned.match(/\}/g) || []).length;
+  
+  if (finalOpenBraces !== finalCloseBraces) {
+    console.log('🚨 CRITICAL: CSS brace mismatch detected, using fallback CSS');
+    return `@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: 'Inter', sans-serif;
+  @apply bg-gray-50 text-gray-900;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  @apply font-bold text-gray-900;
 }`;
   }
   
@@ -1622,10 +1663,22 @@ body {
           console.log(`🔍 Processing CSS file: ${path}`);
           processedContent = cleanCSSContent(processedContent);
           
-          // Additional check for malformed CSS braces
-          if (processedContent.includes('} }') || processedContent.includes('{ {')) {
-            console.log(`🔧 FIXING: Removing malformed CSS braces in ${path}`);
+          // Enhanced CSS malformation detection and fixing
+          if (processedContent.includes('} }') || 
+              processedContent.includes('{ {') || 
+              /^\s*\}\s*$/m.test(processedContent) ||
+              /^\s*\{\s*$/m.test(processedContent)) {
+            console.log(`🔧 FIXING: Removing malformed CSS structures in ${path}`);
+            
+            // Fix duplicate braces
             processedContent = processedContent.replace(/\}\s*\}/g, '}').replace(/\{\s*\{/g, '{');
+            
+            // Remove orphaned braces
+            processedContent = processedContent.replace(/^\s*\}\s*$/gm, '');
+            processedContent = processedContent.replace(/^\s*\{\s*$/gm, '');
+            
+            // Clean up extra newlines
+            processedContent = processedContent.replace(/\n\s*\n\s*\n/g, '\n\n');
           }
           
           console.log(`✅ CSS cleaned for ${path}: ${processedContent.substring(0, 100)}...`);
@@ -1647,10 +1700,22 @@ body {
             console.log(`🔍 Processing CSS object for: ${path}`);
             jsonContent = cleanCSSContent(jsonContent);
             
-            // Additional check for malformed CSS braces
-            if (jsonContent.includes('} }') || jsonContent.includes('{ {')) {
-              console.log(`🔧 FIXING: Removing malformed CSS braces in ${path}`);
+            // Enhanced CSS malformation detection and fixing
+            if (jsonContent.includes('} }') || 
+                jsonContent.includes('{ {') || 
+                /^\s*\}\s*$/m.test(jsonContent) ||
+                /^\s*\{\s*$/m.test(jsonContent)) {
+              console.log(`🔧 FIXING: Removing malformed CSS structures in ${path}`);
+              
+              // Fix duplicate braces
               jsonContent = jsonContent.replace(/\}\s*\}/g, '}').replace(/\{\s*\{/g, '{');
+              
+              // Remove orphaned braces
+              jsonContent = jsonContent.replace(/^\s*\}\s*$/gm, '');
+              jsonContent = jsonContent.replace(/^\s*\{\s*$/gm, '');
+              
+              // Clean up extra newlines
+              jsonContent = jsonContent.replace(/\n\s*\n\s*\n/g, '\n\n');
             }
             
             console.log(`✅ CSS object cleaned for ${path}: ${jsonContent.substring(0, 100)}...`);

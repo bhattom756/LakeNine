@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import connectDB from '@/lib/mongodb';
-import ChatHistory from '@/models/ChatHistory';
+import ChatHistory, { IChatHistory, IMessage } from '@/models/ChatHistory';
 
 export default async function handler(
   req: NextApiRequest,
@@ -35,18 +35,19 @@ export default async function handler(
       return res.status(404).json({ error: 'Chat not found' });
     }
 
-    console.log(`✅ Chat loaded with ${chat.messages.length} messages`);
+    const chatData = chat as any;
+    console.log(`✅ Chat loaded with ${(chatData.messages || []).length} messages`);
 
     // Transform data for frontend
     const formattedChat = {
-      id: chat._id.toString(),
-      title: chat.title,
-      createdAt: chat.createdAt,
-      updatedAt: chat.updatedAt,
-      userId: chat.userId,
-      userEmail: chat.userEmail,
-      userName: chat.userName,
-      messages: chat.messages.map(msg => ({
+      id: chatData._id ? chatData._id.toString() : '',
+      title: chatData.title,
+      createdAt: chatData.createdAt,
+      updatedAt: chatData.updatedAt,
+      userId: chatData.userId,
+      userEmail: chatData.userEmail,
+      userName: chatData.userName,
+      messages: (chatData.messages || []).map((msg: any) => ({
         role: msg.role,
         content: msg.content,
         timestamp: msg.timestamp

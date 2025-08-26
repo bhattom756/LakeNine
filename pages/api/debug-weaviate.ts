@@ -63,7 +63,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         webComponentClass,
         fields,
         hasData: false,
-        queryError: queryError.message,
+        queryError: queryError instanceof Error ? queryError.message : 'Unknown query error',
         totalClasses: schema.classes?.length || 0
       });
     }
@@ -72,7 +72,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.error('❌ Error getting Weaviate schema:', error);
     return res.status(500).json({ 
       error: 'Failed to get schema', 
-      details: error.message 
+      details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 }
