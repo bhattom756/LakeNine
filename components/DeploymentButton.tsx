@@ -1,8 +1,31 @@
 "use client";
 
 import { useState } from 'react';
-import { Globe, Loader, ExternalLink, Copy } from 'lucide-react';
+import { Globe, Loader, ExternalLink, Copy, Terminal as TerminalIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
+import dynamic from 'next/dynamic';
+
+// Import DeploymentTerminal dynamically to avoid SSR issues with xterm.js
+const DeploymentTerminal = dynamic(() => import('./DeploymentTerminal'), {
+  ssr: false,
+  loading: () => (
+    <div className="bg-[#1a1a1a] border border-gray-700 rounded-lg overflow-hidden">
+      <div className="bg-gray-800 px-3 py-2 border-b border-gray-700">
+        <div className="flex items-center gap-2">
+          <div className="flex gap-1">
+            <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+            <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+            <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+          </div>
+          <span className="text-gray-300 text-sm font-medium">Loading Terminal...</span>
+        </div>
+      </div>
+      <div className="h-64 w-full bg-[#1a1a1a] flex items-center justify-center">
+        <Loader className="h-6 w-6 animate-spin text-gray-400" />
+      </div>
+    </div>
+  )
+});
 
 interface DeploymentButtonProps {
   projectFiles: Record<string, string>;
@@ -25,6 +48,29 @@ const DeploymentButton = ({
 }: DeploymentButtonProps) => {
   const [isDeploying, setIsDeploying] = useState(false);
   const [deploymentResult, setDeploymentResult] = useState<DeploymentResult | null>(null);
+  const [showTerminal, setShowTerminal] = useState(false);
+
+  const writeToTerminal = (message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info') => {
+    // Only access window object on client side
+    if (typeof window === 'undefined') return;
+    
+    const terminal = (window as any).deploymentTerminal;
+    if (terminal) {
+      switch (type) {
+        case 'success':
+          terminal.writeSuccess(message);
+          break;
+        case 'error':
+          terminal.writeError(message);
+          break;
+        case 'warning':
+          terminal.writeWarning(message);
+          break;
+        default:
+          terminal.writeInfo(message);
+      }
+    }
+  };
 
   const deployToVercel = async () => {
     if (!userId) {
@@ -38,13 +84,34 @@ const DeploymentButton = ({
     }
 
     setIsDeploying(true);
+    setShowTerminal(true);
     const deployingToast = toast.loading('Deploying to Vercel...');
 
+    // Clear terminal and show initial messages
+    setTimeout(() => {
+      if (typeof window === 'undefined') return;
+      
+      const terminal = (window as any).deploymentTerminal;
+      if (terminal) {
+        terminal.clear();
+        terminal.writeLine('🚀 Starting Vercel deployment...');
+        terminal.writeLine('═══════════════════════════════════════');
+        terminal.writeInfo(`Project: ${projectName || 'Generated Website'}`);
+        terminal.writeInfo(`Files: ${Object.keys(projectFiles).length} files`);
+        terminal.writeInfo(`User: ${userId}`);
+        terminal.writeLine('');
+      }
+    }, 100);
+
     try {
+      writeToTerminal('📦 Preparing files for deployment...');
+      
       console.log('🚀 Starting deployment...', {
         projectName,
         filesCount: Object.keys(projectFiles).length
       });
+
+      writeToTerminal('🌐 Sending to Vercel API...');
 
       const response = await fetch('/api/deploy/vercel', {
         method: 'POST',
@@ -60,37 +127,62 @@ const DeploymentButton = ({
 
       if (!response.ok) {
         const errorData = await response.json();
+        writeToTerminal(`Deployment request failed: ${errorData.details || errorData.error}`, 'error');
         throw new Error(errorData.details || errorData.error || 'Deployment failed');
       }
+
+      writeToTerminal('⚡ Deployment initiated successfully!', 'success');
 
       const data = await response.json();
       const deployment = data.deployment as DeploymentResult;
       
       setDeploymentResult(deployment);
       
+      writeToTerminal(`🏗️  Building project...`, 'info');
+      writeToTerminal(`📦 Installing dependencies...`, 'info');
+      writeToTerminal(`🔨 Running build process...`, 'info');
+      writeToTerminal(`🚀 Deploying to Vercel infrastructure...`, 'info');
+      writeToTerminal('', 'info');
+      writeToTerminal(`✅ Deployment successful!`, 'success');
+      writeToTerminal(`🌍 Live URL: ${deployment.url}`, 'success');
+      writeToTerminal(`📋 Deployment ID: ${deployment.deploymentId}`, 'info');
+      writeToTerminal(`📊 Files deployed: ${data.filesDeployed || Object.keys(projectFiles).length}`, 'info');
+      writeToTerminal(`📦 Project: ${data.projectName || projectName}`, 'info');
+      
+      // Show success toast with clickable link
       toast.success(
-        <div className="flex flex-col">
-          <span>🎉 Website deployed successfully!</span>
-          <a 
-            href={deployment.url} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="text-blue-600 hover:underline text-sm mt-1"
+        <div className="flex flex-col space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="text-green-600">🎉</span>
+            <span className="font-semibold">Successfully deployed to Vercel!</span>
+          </div>
+          <button
+            onClick={() => {
+              window.open(deployment.url, '_blank', 'noopener,noreferrer');
+              toast.success('🌍 Opening live website...', { duration: 3000 });
+            }}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm font-medium transition-colors flex items-center gap-2 w-fit"
           >
-            View live website →
-          </a>
+            <Globe className="h-3 w-3" />
+            View Live Website
+          </button>
+          <div className="text-xs text-gray-600 truncate">
+            {deployment.url}
+          </div>
         </div>,
         { 
           id: deployingToast,
-          duration: 8000 
+          duration: 15000 
         }
       );
       
       console.log('✅ Deployment successful:', deployment);
     } catch (error) {
       console.error('❌ Deployment failed:', error);
+      writeToTerminal(`Deployment failed: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+      
       toast.error(
-        `Deployment failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `❌ Deployment failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
         { 
           id: deployingToast,
           duration: 6000 
@@ -111,7 +203,7 @@ const DeploymentButton = ({
   const hasFiles = projectFiles && Object.keys(projectFiles).length > 0;
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-3">
       {/* Deploy Button */}
       <button
         onClick={deployToVercel}
@@ -145,6 +237,27 @@ const DeploymentButton = ({
           </>
         )}
       </button>
+
+      {/* Terminal Toggle */}
+      {(isDeploying || deploymentResult) && (
+        <button
+          onClick={() => setShowTerminal(!showTerminal)}
+          className="flex items-center gap-2 px-3 py-1 text-xs text-gray-400 hover:text-white transition-colors"
+        >
+          <TerminalIcon className="h-3 w-3" />
+          {showTerminal ? 'Hide' : 'Show'} Deployment Logs
+        </button>
+      )}
+
+      {/* Deployment Terminal */}
+      {showTerminal && (
+        <div className="mt-2">
+          <DeploymentTerminal 
+            isVisible={showTerminal}
+            onMessage={(message) => console.log('Terminal:', message)}
+          />
+        </div>
+      )}
 
       {/* Deployment Result */}
       {deploymentResult && (

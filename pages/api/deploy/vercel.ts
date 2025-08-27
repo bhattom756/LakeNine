@@ -54,9 +54,10 @@ export default async function handler(
 
     console.log('📦 Preparing deployment for:', uniqueProjectName);
     console.log('📁 Files to deploy:', Object.keys(files).length);
+    console.log('📋 File list:', Object.keys(files));
 
-    // Prepare files for Vercel deployment
-    const vercelFiles: Record<string, { file: string }> = {};
+    // Prepare files for Vercel deployment (CORRECT Array format!)
+    const vercelFiles: Array<{ file: string; data: string }> = [];
     
     Object.entries(files).forEach(([filePath, content]) => {
       // Convert file paths to work with Vercel
@@ -67,15 +68,18 @@ export default async function handler(
         vercelPath = vercelPath.substring(1);
       }
       
-      // Ensure we have proper file structure for Vite
-      vercelFiles[vercelPath] = {
-        file: content
-      };
+      // Add to array with correct Vercel API format
+      vercelFiles.push({
+        file: vercelPath,  // Path/name of the file
+        data: content      // Content of the file
+      });
     });
 
     // Add deployment configuration files
-    vercelFiles['vercel.json'] = {
-      file: JSON.stringify({
+    vercelFiles.push({
+      file: 'vercel.json',
+      data: JSON.stringify({
+        "version": 2,
         "builds": [
           {
             "src": "package.json",
@@ -92,22 +96,56 @@ export default async function handler(
           }
         ]
       }, null, 2)
-    };
+    });
 
     // Add build script if package.json exists and doesn't have build script
-    if (vercelFiles['package.json']) {
+    const packageJsonFile = vercelFiles.find(f => f.file === 'package.json');
+    if (packageJsonFile) {
       try {
-        const packageJson = JSON.parse(vercelFiles['package.json'].file);
+        const packageJson = JSON.parse(packageJsonFile.data);
         if (!packageJson.scripts?.build) {
           packageJson.scripts = packageJson.scripts || {};
           packageJson.scripts.build = 'vite build';
           packageJson.scripts.preview = 'vite preview';
-          vercelFiles['package.json'].file = JSON.stringify(packageJson, null, 2);
+          packageJsonFile.data = JSON.stringify(packageJson, null, 2);
         }
       } catch (error) {
         console.warn('⚠️ Could not parse package.json:', error);
       }
     }
+
+    // Log the final payload structure for debugging
+    console.log('📤 Deployment payload structure:', {
+      name: uniqueProjectName,
+      filesCount: vercelFiles.length,
+      filesFormat: 'array',
+      totalSize: vercelFiles.reduce((sum, f) => sum + f.data.length, 0),
+      sampleFile: vercelFiles[0] ? { file: vercelFiles[0].file, dataLength: vercelFiles[0].data.length } : null
+    });
+
+    // Deploy to Vercel using correct API format with projectSettings
+    const deploymentPayload = {
+      name: uniqueProjectName,
+      files: vercelFiles,
+      target: "production",
+      projectSettings: {
+        framework: "vite",
+        installCommand: "npm install",
+        buildCommand: "npm run build",
+        outputDirectory: "dist",
+        devCommand: "vite --port $PORT",
+        rootDirectory: null
+      }
+    };
+
+    console.log('🔧 Final deployment payload preview:', {
+      name: deploymentPayload.name,
+      filesCount: deploymentPayload.files.length,
+      target: deploymentPayload.target,
+      isArray: Array.isArray(deploymentPayload.files),
+      framework: deploymentPayload.projectSettings.framework,
+      hasProjectSettings: !!deploymentPayload.projectSettings
+    });
 
     // Deploy to Vercel
     const deploymentResponse = await fetch('https://api.vercel.com/v13/deployments', {
@@ -116,26 +154,14 @@ export default async function handler(
         'Authorization': `Bearer ${vercelToken}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        name: uniqueProjectName,
-        files: vercelFiles,
-        projectSettings: {
-          framework: 'vite',
-          outputDirectory: 'dist',
-          installCommand: 'npm install',
-          buildCommand: 'npm run build'
-        },
-        meta: {
-          generator: 'LakeNine-AI',
-          userId: userId,
-          createdAt: new Date().toISOString()
-        }
-      }),
+      body: JSON.stringify(deploymentPayload),
     });
 
     if (!deploymentResponse.ok) {
       const errorData = await deploymentResponse.text();
       console.error('❌ Vercel deployment failed:', errorData);
+      console.error('❌ Response status:', deploymentResponse.status);
+      console.error('❌ Response headers:', Object.fromEntries(deploymentResponse.headers.entries()));
       throw new Error(`Vercel deployment failed: ${deploymentResponse.status} ${errorData}`);
     }
 
@@ -148,10 +174,20 @@ export default async function handler(
       status: deploymentData.readyState || 'BUILDING'
     };
 
+    // Log deployment success for debugging
+    console.log('🎉 Deployment Response:', {
+      url: result.url,
+      deploymentId: result.deploymentId,
+      status: result.status,
+      filesCount: Object.keys(files).length
+    });
+
     res.status(200).json({
       success: true,
       deployment: result,
-      message: 'Website deployed successfully to Vercel!'
+      message: 'Website deployed successfully to Vercel!',
+      filesDeployed: Object.keys(files).length,
+      projectName: uniqueProjectName
     });
 
   } catch (error) {
