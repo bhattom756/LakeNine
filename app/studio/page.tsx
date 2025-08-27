@@ -9,6 +9,7 @@ import TestResults from '@/components/TestResults';
 import Navbar from '@/components/ui/Navbar';
 import ChatInterface from '@/components/ChatInterface';
 import FileViewerDialog from '@/components/FileViewerDialog';
+import DeploymentButton from '@/components/DeploymentButton';
 import { toast } from 'react-hot-toast';
 import { initWebContainer, getFileTree, readFile } from '@/lib/webcontainer';
 
@@ -283,16 +284,31 @@ export default function StudioPage() {
           }}
         />
 
-        {/* Right Panel - Test Results */}
+        {/* Right Panel - Actions & Test Results */}
         <div 
           className="bg-[#1a1a1a] overflow-hidden border-l border-gray-800"
           style={{ width: `${rightWidth}%` }}
         >
           <div className="px-4 py-3 bg-[#1a1a1a] text-white font-bold text-lg h-[52px] flex items-center border-b border-gray-800">
-            <h2 className="text-lg font-semibold">Component Testing</h2>
+            <h2 className="text-lg font-semibold">Actions & Testing</h2>
           </div>
-          <div className="h-full overflow-auto">
-            <TestResults testResults={testResults} />
+          <div className="h-full overflow-auto p-4 space-y-4">
+            {/* Deployment Section */}
+            <div className="bg-gray-800 rounded-lg border border-gray-700 p-4">
+              <h4 className="text-sm font-medium text-white mb-3">Deploy Website</h4>
+              <DeploymentButton
+                projectFiles={projectFiles}
+                projectName="Generated Website"
+                userId={user?.uid}
+                disabled={!webContainerInitialized || Object.keys(projectFiles).length === 0}
+              />
+            </div>
+            
+            {/* Test Results Section */}
+            <div className="bg-gray-800 rounded-lg border border-gray-700 p-4">
+              <h4 className="text-sm font-medium text-white mb-3">Component Testing</h4>
+              <TestResults testResults={testResults} />
+            </div>
           </div>
         </div>
       </div>

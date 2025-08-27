@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import connectDB from '@/lib/mongodb';
-import ChatHistory, { IChatHistory, IMessage } from '@/models/ChatHistory';
+import ChatHistory, { IChatHistory, IMessage, IProjectState, IGeneratedFile } from '@/models/ChatHistory';
 
 export default async function handler(
   req: NextApiRequest,
@@ -19,7 +19,8 @@ export default async function handler(
       userEmail, 
       userName, 
       messages, 
-      chatId // Optional - for updating existing chat
+      chatId, // Optional - for updating existing chat
+      projectState // Optional - generated files and project state
     } = req.body;
 
     // Validate required fields
@@ -28,6 +29,27 @@ export default async function handler(
       return res.status(400).json({ 
         error: 'Missing required fields: userId, userEmail, messages' 
       });
+    }
+
+    // Process project state if provided
+    let processedProjectState: IProjectState | undefined;
+    if (projectState) {
+      console.log('📁 Processing project state with', projectState.files?.length || 0, 'files');
+      
+      processedProjectState = {
+        files: (projectState.files || []).map((file: any): IGeneratedFile => ({
+          fileName: file.fileName || '',
+          filePath: file.filePath || '',
+          content: file.content || '',
+          size: file.content ? file.content.length : 0,
+          lastModified: new Date()
+        })),
+        fileStructure: projectState.fileStructure || {},
+        previewUrl: projectState.previewUrl,
+        projectType: projectState.projectType || 'react',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
     }
 
     // Generate title from first user message (max 50 chars)
@@ -49,6 +71,7 @@ export default async function handler(
             ...msg,
             timestamp: msg.timestamp || new Date()
           })),
+          projectState: processedProjectState,
           updatedAt: new Date(),
           userName: userName || undefined
         },
@@ -73,6 +96,7 @@ export default async function handler(
           ...msg,
           timestamp: msg.timestamp || new Date()
         })),
+        projectState: processedProjectState,
         createdAt: new Date(),
         updatedAt: new Date(),
         isActive: true
@@ -82,11 +106,15 @@ export default async function handler(
     }
 
     console.log('✅ Chat saved successfully:', chatHistory._id);
+    if (processedProjectState) {
+      console.log('📁 Project state saved with', processedProjectState.files.length, 'files');
+    }
 
     res.status(200).json({
       success: true,
       chatId: chatHistory._id,
       title: chatHistory.title,
+      filesCount: processedProjectState?.files.length || 0,
       message: chatId ? 'Chat updated successfully' : 'Chat saved successfully'
     });
 

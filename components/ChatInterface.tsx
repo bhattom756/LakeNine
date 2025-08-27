@@ -7,7 +7,7 @@ import {
   PopoverTrigger, 
   PopoverContent 
 } from "@/components/ui/popover";
-import { writeMultipleFiles, getFileTree, getWebContainer } from "@/lib/webcontainer";
+import { writeMultipleFiles, getFileTree, getWebContainer, writeFile } from "@/lib/webcontainer";
 import { useUser } from "@/context/UserContext";
 import { getBoltConfig } from "@/lib/config";
 import PromptSettings from "./PromptSettings";
@@ -58,7 +58,8 @@ async function generateProjectWithAI(
   setFileStructure: (structure: string[]) => void,
   setTestResults: (results: string[]) => void,
   setProjectFiles: (files: Record<string, string>) => void,
-  useBoltPrompt: boolean = true
+  useBoltPrompt: boolean = true,
+  abortSignal?: AbortSignal
 ): Promise<{ plan: string; files: Record<string, string>; metadata?: any }> {
   try {
     console.log('🚀 Starting enhanced AI generation for:', userPrompt);
@@ -73,6 +74,7 @@ async function generateProjectWithAI(
         prompt: userPrompt, 
         useBoltPrompt 
       }),
+      signal: abortSignal // Add abort signal to fetch
     });
 
     if (!response.ok) {
@@ -195,10 +197,16 @@ const saveChatToHistory = async (
   userEmail: string,
   userName: string | undefined,
   messages: Message[],
-  chatId?: string
+  chatId?: string,
+  projectState?: ProjectState
 ) => {
   try {
-    console.log('💾 Saving chat to MongoDB...', { userId, userEmail, messageCount: messages.length });
+    console.log('💾 Saving chat to MongoDB...', { 
+      userId, 
+      userEmail, 
+      messageCount: messages.length,
+      filesCount: projectState?.files.length || 0 
+    });
     
     const response = await fetch('/api/chat/save', {
       method: 'POST',
@@ -210,7 +218,8 @@ const saveChatToHistory = async (
         userEmail,
         userName,
         messages,
-        chatId
+        chatId,
+        projectState
       }),
     });
 
@@ -219,7 +228,7 @@ const saveChatToHistory = async (
     }
 
     const data = await response.json();
-    console.log('✅ Chat saved successfully:', data.chatId);
+    console.log('✅ Chat saved successfully:', data.chatId, `with ${data.filesCount || 0} files`);
     return data;
   } catch (error) {
     console.error('❌ Error saving chat:', error);
@@ -265,6 +274,89 @@ const loadChatConversation = async (chatId: string, userId: string): Promise<Loa
   }
 };
 
+// Helper function to restore files to WebContainer with proper error handling
+const restoreFilesToWebContainer = async (
+  filesMap: Record<string, string>, 
+  setFileStructure: (structure: string[]) => void,
+  originalFiles: ProjectFile[]
+) => {
+  const webContainer = getWebContainer();
+  if (!webContainer) {
+    console.warn('⚠️ WebContainer not ready, using fallback file structure');
+    const fileNames = originalFiles.map(f => f.filePath);
+    setFileStructure(fileNames);
+    return;
+  }
+
+  console.log('📁 Restoring files to WebContainer...');
+  console.log('📋 Files to restore:', Object.keys(filesMap));
+
+  // Wait for WebContainer to be fully ready
+  await new Promise(resolve => setTimeout(resolve, 200));
+
+  try {
+    // Write files individually for better error handling
+    const writtenFiles: string[] = [];
+    
+    for (const [filePath, content] of Object.entries(filesMap)) {
+      try {
+        console.log(`📝 Writing file: ${filePath}`);
+        
+        // Ensure directory exists
+        const dirPath = filePath.substring(0, filePath.lastIndexOf('/'));
+        if (dirPath && dirPath !== filePath) {
+          try {
+            await webContainer.fs.mkdir(dirPath, { recursive: true });
+          } catch (dirError) {
+            // Directory might already exist
+            console.log(`📁 Directory handling for ${dirPath}:`, dirError);
+          }
+        }
+        
+        // Write the file
+        await webContainer.fs.writeFile(filePath, content);
+        console.log(`✅ Successfully wrote: ${filePath}`);
+        writtenFiles.push(filePath);
+        
+        // Verify the file was written
+        try {
+          const verifyContent = await webContainer.fs.readFile(filePath, 'utf-8');
+          if (verifyContent.length !== content.length) {
+            console.warn(`⚠️ File length mismatch for ${filePath}`);
+          }
+        } catch (verifyError) {
+          console.warn(`⚠️ Could not verify ${filePath}:`, verifyError);
+        }
+        
+      } catch (fileError) {
+        console.error(`❌ Failed to write ${filePath}:`, fileError);
+        // Continue with other files
+      }
+    }
+
+    console.log(`✅ Successfully wrote ${writtenFiles.length} files to WebContainer`);
+
+    // Wait for filesystem to settle
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    // Update file structure from WebContainer
+    try {
+      const updatedStructure = await getFileTree();
+      setFileStructure(updatedStructure);
+      console.log('✅ File structure updated from WebContainer:', updatedStructure.length, 'files');
+    } catch (structureError) {
+      console.warn('⚠️ Could not get file tree from WebContainer:', structureError);
+      // Fallback to saved file structure
+      const fileNames = originalFiles.map(f => f.filePath);
+      setFileStructure(fileNames);
+    }
+
+  } catch (error) {
+    console.error('❌ Critical error during file restoration:', error);
+    throw error;
+  }
+};
+
 const ChatInterface = ({
   setGeneratedCode,
   setFileStructure,
@@ -280,6 +372,8 @@ const ChatInterface = ({
   const [showHistory, setShowHistory] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [currentChatId, setCurrentChatId] = useState<string | undefined>();
+  const [currentProjectState, setCurrentProjectState] = useState<ProjectState | undefined>();
+  const abortControllerRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Scroll to bottom when messages change
@@ -323,7 +417,46 @@ const ChatInterface = ({
           timestamp: new Date(msg.timestamp)
         })));
         setCurrentChatId(chat.id);
-        toast.success('Conversation loaded!', { id: loadingToast });
+        
+        // Restore project state if available
+        if (chat.projectState) {
+          console.log('🔄 Restoring project state with', chat.projectState.files.length, 'files');
+          setCurrentProjectState(chat.projectState);
+          
+          // Restore files to UI
+          const filesMap: Record<string, string> = {};
+          chat.projectState.files.forEach(file => {
+            filesMap[file.filePath] = file.content;
+          });
+          
+          setProjectFiles(filesMap);
+          
+          // CRITICAL: Write files to WebContainer filesystem
+          try {
+            await restoreFilesToWebContainer(filesMap, setFileStructure, chat.projectState.files);
+          } catch (webContainerError) {
+            console.error('❌ Failed to restore files to WebContainer:', webContainerError);
+            // Fallback to saved file structure
+            const fileNames = chat.projectState.files.map(f => f.filePath);
+            setFileStructure(fileNames);
+            toast.error('Could not restore files to live preview. Try generating a new project.');
+          }
+          
+          // Set main app content for display
+          const mainFile = chat.projectState.files.find(f => 
+            f.filePath.includes('App.jsx') || f.filePath.includes('main.jsx') || f.filePath.includes('index.jsx')
+          );
+          if (mainFile) {
+            setGeneratedCode(mainFile.content);
+          }
+          
+          console.log('✅ Project state restored completely');
+          toast.success(`Loaded: ${chat.title} with ${chat.projectState.files.length} files`, { id: loadingToast });
+        } else {
+          console.log('ℹ️ No project state found in loaded chat');
+          setCurrentProjectState(undefined);
+          toast.success('Conversation loaded!', { id: loadingToast });
+        }
       } else {
         toast.error('Failed to load conversation', { id: loadingToast });
       }
@@ -332,11 +465,31 @@ const ChatInterface = ({
     }
   };
 
-  // Start a new chat
+  // Start a new chat and clear all state
   const startNewChat = () => {
+    // Cancel any ongoing AI generation
+    if (abortControllerRef.current) {
+      console.log('🛑 Cancelling ongoing AI generation...');
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    
+    // Reset generation state
+    setIsGenerating(false);
+    
+    // Clear all chat and project state
     setMessages([]);
     setCurrentChatId(undefined);
+    setCurrentProjectState(undefined);
     setInput("");
+    
+    // Clear all UI state
+    setProjectFiles({});
+    setFileStructure([]);
+    setGeneratedCode('');
+    setTestResults([]);
+    
+    console.log('🆕 Started new chat - all state cleared, AI generation cancelled');
     toast.success('Started new conversation');
   };
 
@@ -350,7 +503,8 @@ const ChatInterface = ({
         user.email || '',
         user.displayName || undefined,
         messages,
-        currentChatId
+        currentChatId,
+        currentProjectState
       );
       
       // Refresh chat history
@@ -382,6 +536,10 @@ const ChatInterface = ({
     setInput("");
     setIsGenerating(true);
     
+    // Create new AbortController for this generation
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+    
     try {
       // Get current configuration
       const config = getBoltConfig();
@@ -401,7 +559,8 @@ const ChatInterface = ({
         setFileStructure,
         setTestResults,
         setProjectFiles,
-        config.useBoltPrompt
+        config.useBoltPrompt,
+        abortController.signal
       );
       
       // Create a more conversational and detailed response
@@ -423,12 +582,36 @@ const ChatInterface = ({
       const finalMessages = [...newMessages, assistantMessage];
       setMessages(finalMessages);
       
+      // Create project state from generated files
+      let projectState: ProjectState | undefined;
+      if (result.files && Object.keys(result.files).length > 0) {
+        const projectFiles: ProjectFile[] = Object.entries(result.files).map(([filePath, content]) => ({
+          fileName: filePath.split('/').pop() || filePath,
+          filePath,
+          content,
+          size: content.length,
+          lastModified: new Date()
+        }));
+        
+        projectState = {
+          files: projectFiles,
+          fileStructure: Object.keys(result.files),
+          projectType: 'react',
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+        
+        setCurrentProjectState(projectState);
+        console.log('📁 Created project state with', projectFiles.length, 'files');
+      }
+      
       // Auto-save chat if user is logged in
       if (user) {
         try {
           console.log('💾 Auto-saving chat...', { 
             userId: user.uid, 
-            messageCount: finalMessages.length 
+            messageCount: finalMessages.length,
+            filesCount: projectState?.files.length || 0
           });
           
           const saveResult = await saveChatToHistory(
@@ -436,7 +619,8 @@ const ChatInterface = ({
             user.email || '',
             user.displayName || undefined,
             finalMessages,
-            currentChatId
+            currentChatId,
+            projectState
           );
           
           // Update current chat ID if this was a new chat
@@ -452,6 +636,14 @@ const ChatInterface = ({
       }
       
     } catch (error) {
+      // Check if the error is due to abortion
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.log('🛑 AI generation was cancelled');
+        // Remove the thinking message if generation was cancelled
+        setMessages(newMessages);
+        return;
+      }
+      
       console.error('Generation error:', error);
       
       // Replace thinking message with error
@@ -466,6 +658,10 @@ Please try rephrasing your request or being more specific about what you'd like 
       setMessages([...newMessages, errorMessage]);
     } finally {
       setIsGenerating(false);
+      // Clear the abort controller reference
+      if (abortControllerRef.current === abortController) {
+        abortControllerRef.current = null;
+      }
     }
   };
 

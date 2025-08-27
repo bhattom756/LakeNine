@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import connectDB from '@/lib/mongodb';
-import ChatHistory, { IChatHistory, IMessage } from '@/models/ChatHistory';
+import ChatHistory, { IChatHistory, IMessage, IProjectState } from '@/models/ChatHistory';
 
 export default async function handler(
   req: NextApiRequest,
@@ -37,6 +37,11 @@ export default async function handler(
 
     const chatData = chat as any;
     console.log(`✅ Chat loaded with ${(chatData.messages || []).length} messages`);
+    
+    // Log project state info if available
+    if (chatData.projectState) {
+      console.log(`📁 Project state found with ${(chatData.projectState.files || []).length} files`);
+    }
 
     // Transform data for frontend
     const formattedChat = {
@@ -51,12 +56,27 @@ export default async function handler(
         role: msg.role,
         content: msg.content,
         timestamp: msg.timestamp
-      }))
+      })),
+      projectState: chatData.projectState ? {
+        files: (chatData.projectState.files || []).map((file: any) => ({
+          fileName: file.fileName,
+          filePath: file.filePath,
+          content: file.content,
+          size: file.size,
+          lastModified: file.lastModified
+        })),
+        fileStructure: chatData.projectState.fileStructure || {},
+        previewUrl: chatData.projectState.previewUrl,
+        projectType: chatData.projectState.projectType || 'react',
+        createdAt: chatData.projectState.createdAt,
+        updatedAt: chatData.projectState.updatedAt
+      } : undefined
     };
 
     res.status(200).json({
       success: true,
-      chat: formattedChat
+      chat: formattedChat,
+      filesCount: formattedChat.projectState?.files.length || 0
     });
 
   } catch (error) {
