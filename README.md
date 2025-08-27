@@ -1,62 +1,68 @@
-LAKENINE
-Transform Ideas into Reality, Instantly and Seamlessly
+# LAKENINE  
+*Transform Ideas into Reality, Instantly and Seamlessly*  
 
-last-commit repo-top-language repo-language-count
-Built with the tools and technologies:
+---
 
-JSON Markdown npm Mongoose Firebase JavaScript
-Pexels React TypeScript ESLint OpenAI Axios
+![last-commit](https://img.shields.io/github/last-commit/bhattom756/LakeNine?style=flat)  
+![repo-top-language](https://img.shields.io/github/languages/top/bhattom756/LakeNine)  
+![repo-language-count](https://img.shields.io/github/languages/count/bhattom756/LakeNine)  
 
-Table of Contents
-Overview
-Getting Started
-Prerequisites
-Installation
-Usage
-Testing
-Overview
-LakeNine is a comprehensive developer tool that streamlines web application development through AI-powered code generation, in-browser editing, and seamless deployment workflows. Built on a modern Next.js architecture, it offers a rich ecosystem of components for UI, authentication, file management, and backend integrations, all within a scalable and optimized environment.
+**Built with the tools and technologies:**  
 
-Why LakeNine?
+![JSON](https://img.shields.io/badge/JSON-informational?style=flat&logo=json&logoColor=white&color=grey)  
+![Markdown](https://img.shields.io/badge/Markdown-informational?style=flat&logo=markdown&logoColor=white&color=black)  
+![npm](https://img.shields.io/badge/Npm-informational?style=flat&logo=npm&logoColor=white&color=red)  
+![Mongoose](https://img.shields.io/badge/Mongoose-informational?style=flat&logo=mongoose&logoColor=white&color=maroon)  
+![Firebase](https://img.shields.io/badge/Firebase-informational?style=flat&logo=firebase&logoColor=white&color=orange)  
+![JavaScript](https://img.shields.io/badge/JavaScript-informational?style=flat&logo=javascript&logoColor=white&color=yellow)  
+![Pexels](https://img.shields.io/badge/Pexels-informational?style=flat&logo=pexels&logoColor=white&color=green)  
+![React](https://img.shields.io/badge/React-informational?style=flat&logo=react&logoColor=white&color=blue)  
+![TypeScript](https://img.shields.io/badge/TypeScript-informational?style=flat&logo=typescript&logoColor=white&color=blue)  
+![ESLint](https://img.shields.io/badge/ESLint-informational?style=flat&logo=eslint&logoColor=white&color=purple)  
+![OpenAI](https://img.shields.io/badge/OpenAI-informational?style=flat&logo=openai&logoColor=white&color=black)  
+![Axios](https://img.shields.io/badge/Axios-informational?style=flat&logo=axios&logoColor=white&color=blue)  
 
-This project accelerates web development by combining AI automation, real-time in-browser coding, and robust backend support. The core features include:
+---
 
-🧩 🎯 Modular Architecture: A flexible component system for UI, authentication, and project management.
-🚀 🌐 In-Browser Development: Embedded WebContainer environment for live coding and testing.
-🤖 💡 AI-Driven Code Generation: Automated creation of web components and project scaffolds.
-🔄 ⚙️ Deployment Automation: Streamlined deployment to Vercel and other platforms.
-🔍 🗃️ Backend Integrations: Support for MongoDB, Firebase, and Weaviate for data management and search.
-⚡ Performance & Scalability: Optimized configurations for fast, reliable web experiences.
-Getting Started
-Prerequisites
-This project requires the following dependencies:
+## 📑 Table of Contents
+- [Overview](#overview)  
+- [Getting Started](#getting-started)  
+  - [Prerequisites](#prerequisites)  
+  - [Installation](#installation)  
+  - [Usage](#usage)  
+  - [Testing](#testing)  
 
-Programming Language: TypeScript
-Package Manager: Npm
-Installation
-Build LakeNine from the source and install dependencies:
+---
 
-Clone the repository:
+## Overview
+LakeNine is a comprehensive developer tool that streamlines web application development through AI-powered code generation, in-browser editing, and seamless deployment workflows. Built on a modern Next.js architecture, it offers a rich ecosystem of components for UI, authentication, file management, and backend integrations, all within a scalable and optimized environment.  
 
-❯ git clone https://github.com/bhattom756/LakeNine
-Navigate to the project directory:
+### Why LakeNine?  
 
-❯ cd LakeNine
-Install the dependencies:
+This project accelerates web development by combining AI automation, real-time in-browser coding, and robust backend support. The core features include:  
 
-Using npm:
+- 🧩 🎯 **Modular Architecture:** A flexible component system for UI, authentication, and project management.  
+- 🚀 🌐 **In-Browser Development:** Embedded WebContainer environment for live coding and testing.  
+- 🤖 💡 **AI-Driven Code Generation:** Automated creation of web components and project scaffolds.  
+- 🔄 ⚙️ **Deployment Automation:** Streamlined deployment to Vercel and other platforms.  
+- 🔍 🗃️ **Backend Integrations:** Support for MongoDB, Firebase, and Weaviate for data management and search.  
+- ⚡ **Performance & Scalability:** Optimized configurations for fast, reliable web experiences.  
 
-❯ npm install
-Usage
-Run the project with:
+---
 
-Using npm:
+## Getting Started  
 
-npm start
-Testing
-Lakenine uses the {test_framework} test framework. Run the test suite with:
+### Prerequisites
+This project requires the following dependencies:  
 
-Using npm:
+- **Programming Language:** TypeScript  
+- **Package Manager:** Npm  
 
-npm test
-⬆ Return
+---
+
+### Installation
+Build LakeNine from the source and install dependencies:  
+
+1. **Clone the repository:**  
+   ```bash
+   git clone https://github.com/bhattom756/LakeNine
