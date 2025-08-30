@@ -1,36 +1,68 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# LAKENINE  
+*Transform Ideas into Reality, Instantly and Seamlessly*  
 
-## Getting Started
+---
 
-First, run the development server:
+![last-commit](https://img.shields.io/github/last-commit/bhattom756/LakeNine?style=flat)  
+![repo-top-language](https://img.shields.io/github/languages/top/bhattom756/LakeNine)  
+![repo-language-count](https://img.shields.io/github/languages/count/bhattom756/LakeNine)  
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+**Built with the tools and technologies:**  
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+![JSON](https://img.shields.io/badge/JSON-informational?style=flat&logo=json&logoColor=white&color=grey)  
+![Markdown](https://img.shields.io/badge/Markdown-informational?style=flat&logo=markdown&logoColor=white&color=black)  
+![npm](https://img.shields.io/badge/Npm-informational?style=flat&logo=npm&logoColor=white&color=red)  
+![Mongoose](https://img.shields.io/badge/Mongoose-informational?style=flat&logo=mongoose&logoColor=white&color=maroon)  
+![Firebase](https://img.shields.io/badge/Firebase-informational?style=flat&logo=firebase&logoColor=white&color=orange)  
+![JavaScript](https://img.shields.io/badge/JavaScript-informational?style=flat&logo=javascript&logoColor=white&color=yellow)  
+![Pexels](https://img.shields.io/badge/Pexels-informational?style=flat&logo=pexels&logoColor=white&color=green)  
+![React](https://img.shields.io/badge/React-informational?style=flat&logo=react&logoColor=white&color=blue)  
+![TypeScript](https://img.shields.io/badge/TypeScript-informational?style=flat&logo=typescript&logoColor=white&color=blue)  
+![ESLint](https://img.shields.io/badge/ESLint-informational?style=flat&logo=eslint&logoColor=white&color=purple)  
+![OpenAI](https://img.shields.io/badge/OpenAI-informational?style=flat&logo=openai&logoColor=white&color=black)  
+![Axios](https://img.shields.io/badge/Axios-informational?style=flat&logo=axios&logoColor=white&color=blue)  
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 📑 Table of Contents
+- [Overview](#overview)  
+- [Getting Started](#getting-started)  
+  - [Prerequisites](#prerequisites)  
+  - [Installation](#installation)  
+  - [Usage](#usage)  
+  - [Testing](#testing)  
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## Overview
+LakeNine is a comprehensive developer tool that streamlines web application development through AI-powered code generation, in-browser editing, and seamless deployment workflows. Built on a modern Next.js architecture, it offers a rich ecosystem of components for UI, authentication, file management, and backend integrations, all within a scalable and optimized environment.  
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Why LakeNine?  
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+This project accelerates web development by combining AI automation, real-time in-browser coding, and robust backend support. The core features include:  
 
-## Deploy on Vercel
+- 🧩 🎯 **Modular Architecture:** A flexible component system for UI, authentication, and project management.  
+- 🚀 🌐 **In-Browser Development:** Embedded WebContainer environment for live coding and testing.  
+- 🤖 💡 **AI-Driven Code Generation:** Automated creation of web components and project scaffolds.  
+- 🔄 ⚙️ **Deployment Automation:** Streamlined deployment to Vercel and other platforms.  
+- 🔍 🗃️ **Backend Integrations:** Support for MongoDB, Firebase, and Weaviate for data management and search.  
+- ⚡ **Performance & Scalability:** Optimized configurations for fast, reliable web experiences.  
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Getting Started  
+
+### Prerequisites
+This project requires the following dependencies:  
+
+- **Programming Language:** TypeScript  
+- **Package Manager:** Npm  
+
+---
+
+### Installation
+Build LakeNine from the source and install dependencies:  
+
+1. **Clone the repository:**  
+   ```bash
+   git clone https://github.com/bhattom756/LakeNine
