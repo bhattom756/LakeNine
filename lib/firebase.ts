@@ -15,7 +15,7 @@ import {
   sendPasswordResetEmail,
   User,
   setPersistence,
-  browserSessionPersistence,
+  browserLocalPersistence,
   signInWithCredential
 } from "firebase/auth";
 import { getAnalytics, isSupported } from "firebase/analytics";
@@ -40,8 +40,8 @@ if (typeof window !== 'undefined') {
   // Always use the configured auth domain from Firebase
   auth.config.authDomain = firebaseConfig.authDomain;
   
-  // Set proper persistence
-  setPersistence(auth, browserSessionPersistence)
+  // Set proper persistence - use local persistence but with browser session tracking
+  setPersistence(auth, browserLocalPersistence)
     .catch((error) => {
       console.error("Error setting auth persistence:", error);
     });
@@ -53,6 +53,129 @@ isSupported().then((yes) => {
     getAnalytics(app);
   }
 });
+
+// Browser session tracking for logout on browser close
+const SESSION_KEY = 'firebase_browser_session';
+const AUTH_ACTIVE_KEY = 'firebase_auth_active';
+const SESSION_TIMESTAMP_KEY = 'firebase_session_timestamp';
+
+// Check if this is a new browser session
+const isNewBrowserSession = () => {
+  if (typeof window === 'undefined') return false;
+  
+  // Check multiple indicators of a new browser session
+  const sessionExists = sessionStorage.getItem(SESSION_KEY);
+  const sessionTimestamp = sessionStorage.getItem(SESSION_TIMESTAMP_KEY);
+  
+  // If no session storage data exists, it's definitely a new session
+  if (!sessionExists || !sessionTimestamp) {
+    return true;
+  }
+  
+  // Additional check: if session is older than expected, treat as new
+  const now = Date.now();
+  const sessionTime = parseInt(sessionTimestamp, 10);
+  const timeDiff = now - sessionTime;
+  
+  // If session timestamp is more than 24 hours old, treat as new session
+  if (timeDiff > 24 * 60 * 60 * 1000) {
+    return true;
+  }
+  
+  return false;
+};
+
+// Initialize browser session tracking
+const initializeBrowserSession = async () => {
+  if (typeof window === 'undefined') return;
+  
+  // FIRST: Check if this is a new browser session BEFORE setting anything
+  const isNewSession = isNewBrowserSession();
+  const wasAuthActive = localStorage.getItem(AUTH_ACTIVE_KEY);
+  
+  console.log('Session tracking debug:', {
+    isNewSession,
+    wasAuthActive,
+    sessionStorage: !!sessionStorage.getItem(SESSION_KEY),
+    timestamp: sessionStorage.getItem(SESSION_TIMESTAMP_KEY),
+    currentUser: auth.currentUser?.email || 'none'
+  });
+  
+  // If this is a new browser session and auth was previously active, sign out immediately
+  if (isNewSession && wasAuthActive) {
+    console.log('🚪 New browser session detected - signing out previous session');
+    
+    // Clear auth markers first
+    localStorage.removeItem(AUTH_ACTIVE_KEY);
+    
+    // Sign out from Firebase
+    try {
+      await signOut(auth);
+      console.log('✅ Successfully signed out from previous session');
+    } catch (error) {
+      console.error('❌ Error signing out:', error);
+    }
+  }
+  
+  // NOW set the session markers for this new session
+  sessionStorage.setItem(SESSION_KEY, 'active');
+  sessionStorage.setItem(SESSION_TIMESTAMP_KEY, Date.now().toString());
+  
+  console.log('🔄 Session markers set for new browser session');
+};
+
+// Mark authentication as active
+const markAuthActive = () => {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(AUTH_ACTIVE_KEY, 'true');
+  // Also refresh session markers when auth becomes active
+  sessionStorage.setItem(SESSION_KEY, 'active');
+  sessionStorage.setItem(SESSION_TIMESTAMP_KEY, Date.now().toString());
+};
+
+// Clear authentication markers
+const clearAuthMarkers = () => {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(AUTH_ACTIVE_KEY);
+  sessionStorage.removeItem(SESSION_KEY);
+  sessionStorage.removeItem(SESSION_TIMESTAMP_KEY);
+};
+
+// Set up page unload detection for tab/browser close
+const setupPageUnloadDetection = () => {
+  if (typeof window === 'undefined') return;
+  
+  // Track when page is being unloaded
+  const handleBeforeUnload = () => {
+    // This runs when tab/browser is being closed or page is navigating away
+    // We don't sign out here since refresh should maintain login
+    console.log('Page unload detected - maintaining auth state for potential refresh');
+  };
+  
+  // Track page visibility changes (tab switching, minimizing, etc.)
+  const handleVisibilityChange = () => {
+    if (document.hidden) {
+      console.log('Page hidden - tab switched or minimized');
+    } else {
+      console.log('Page visible - tab focused');
+      // Refresh session markers when tab becomes visible again
+      if (auth.currentUser && localStorage.getItem(AUTH_ACTIVE_KEY)) {
+        sessionStorage.setItem(SESSION_KEY, 'active');
+        sessionStorage.setItem(SESSION_TIMESTAMP_KEY, Date.now().toString());
+      }
+    }
+  };
+  
+  // Add event listeners
+  window.addEventListener('beforeunload', handleBeforeUnload);
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+  
+  // Return cleanup function
+  return () => {
+    window.removeEventListener('beforeunload', handleBeforeUnload);
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+  };
+};
 
 // Auth Providers
 const googleProvider = new GoogleAuthProvider();
@@ -68,12 +191,20 @@ googleProvider.setCustomParameters({
 // --- Helper Functions ---
 
 // Sign up with email and password
-const registerWithEmail = (email: string, password: string) =>
-  createUserWithEmailAndPassword(auth, email, password);
+const registerWithEmail = async (email: string, password: string) => {
+  const result = await createUserWithEmailAndPassword(auth, email, password);
+  // Mark authentication as active for browser session tracking
+  markAuthActive();
+  return result;
+};
 
 // Log in with email and password
-const loginWithEmail = (email: string, password: string) =>
-  signInWithEmailAndPassword(auth, email, password);
+const loginWithEmail = async (email: string, password: string) => {
+  const result = await signInWithEmailAndPassword(auth, email, password);
+  // Mark authentication as active for browser session tracking
+  markAuthActive();
+  return result;
+};
 
 // Sign in with Google
 const signInWithGoogle = async () => {
@@ -90,6 +221,9 @@ const signInWithGoogle = async () => {
     if (result.user.email) {
       localStorage.setItem('lastEmail', result.user.email);
     }
+    
+    // Mark authentication as active for browser session tracking
+    markAuthActive();
     
     // Return result with isNewUser flag
     const isNewUser = result.user.metadata.creationTime === result.user.metadata.lastSignInTime;
@@ -117,6 +251,8 @@ const handleRedirectResult = async () => {
       if (auth.currentUser.email) {
         localStorage.setItem('lastEmail', auth.currentUser.email);
       }
+      // Mark authentication as active for browser session tracking
+      markAuthActive();
       const isNewUser = auth.currentUser.metadata.creationTime === auth.currentUser.metadata.lastSignInTime;
       return { user: auth.currentUser, isNewUser };
     }
@@ -134,6 +270,9 @@ const handleRedirectResult = async () => {
         if (result.user.email) {
           localStorage.setItem('lastEmail', result.user.email);
         }
+        
+        // Mark authentication as active for browser session tracking
+        markAuthActive();
         
         // Determine if this was a sign-up or sign-in based on user metadata
         const isNewUser = result.user.metadata.creationTime === result.user.metadata.lastSignInTime;
@@ -253,6 +392,9 @@ const loginWithEmailLink = async (email: string = '', link: string = '') => {
     // Clear the stored email
     localStorage.removeItem('emailForSignIn');
     
+    // Mark authentication as active for browser session tracking
+    markAuthActive();
+    
     console.log("Email link sign-in successful:", result.user.email);
     
     return result;
@@ -267,7 +409,11 @@ const onUserChange = (cb: (user: User | null) => void) =>
   onAuthStateChanged(auth, cb);
 
 // Sign out
-const logout = () => signOut(auth);
+const logout = async () => {
+  // Clear authentication markers before signing out
+  clearAuthMarkers();
+  return signOut(auth);
+};
 
 // Send password reset email
 const resetPassword = async (email: string) => {
@@ -370,6 +516,9 @@ const signInWithGooglePopup = async () => {
       localStorage.setItem('lastEmail', result.user.email);
     }
     
+    // Mark authentication as active for browser session tracking
+    markAuthActive();
+    
     return result;
   } catch (error: any) {
     console.error("Google popup sign-in error:", error);
@@ -397,7 +546,12 @@ export {
   verifyAuthConfig,
   onAuthStateChanged,
   signInWithEmailAndPassword,
-  signOut
+  signOut,
+  initializeBrowserSession,
+  isNewBrowserSession,
+  markAuthActive,
+  clearAuthMarkers,
+  setupPageUnloadDetection
 };
 
 export type { User };

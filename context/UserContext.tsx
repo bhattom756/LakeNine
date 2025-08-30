@@ -12,9 +12,12 @@ import {
   signInWithEmailAndPassword,
   signOut,
   type User as FirebaseUser,
+  initializeBrowserSession,
+  markAuthActive,
+  clearAuthMarkers,
+  setupPageUnloadDetection,
 } from "@/lib/firebase";
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { setPersistence, browserLocalPersistence } from 'firebase/auth';
 
 interface UserContextType {
   user: FirebaseUser | null;
@@ -39,18 +42,26 @@ export function UserProvider({ children }: { children: ReactNode }) {
   // Convert undefined to null to match our interface
   const user = authUser ?? null;
 
-  // Set persistence to local storage (persists until browser closes or explicit logout)
+  // Initialize browser session tracking after auth state is determined
   useEffect(() => {
-    const setAuthPersistence = async () => {
+    const initializeSession = async () => {
       try {
-        await setPersistence(auth, browserLocalPersistence);
-        console.log("UserContext: Auth persistence set to local storage");
+        // Always run session tracking, regardless of loading state
+        // This ensures we catch new browser sessions immediately
+        await initializeBrowserSession();
+        console.log("UserContext: Browser session tracking initialized");
       } catch (error) {
-        console.error("UserContext: Error setting auth persistence:", error);
+        console.error("UserContext: Error initializing browser session:", error);
       }
     };
 
-    setAuthPersistence();
+    initializeSession();
+  }, []); // Run once on mount
+
+  // Set up page unload detection
+  useEffect(() => {
+    const cleanup = setupPageUnloadDetection();
+    return cleanup; // Cleanup on unmount
   }, []);
 
   // For debugging and session management
@@ -60,6 +71,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
       // Store user info for debugging
       localStorage.setItem('userEmail', user.email || '');
       localStorage.setItem('userId', user.uid);
+      // Mark authentication as active
+      markAuthActive();
     } else if (!loading) {
       console.log("UserContext: Auth state changed - user signed out");
       // Clear stored user info
@@ -67,6 +80,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem('userId');
       localStorage.removeItem('userToken');
       sessionStorage.clear();
+      // Clear authentication markers
+      clearAuthMarkers();
     }
   }, [user, loading]);
 
@@ -74,6 +89,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
     try {
       console.log("UserContext: Attempting login for:", email);
       await signInWithEmailAndPassword(auth, email, password);
+      // Mark authentication as active
+      markAuthActive();
       console.log("UserContext: Login successful");
     } catch (error) {
       console.error("Login error in UserContext:", error);
@@ -90,6 +107,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem('userId');
       localStorage.removeItem('userToken');
       sessionStorage.clear();
+      
+      // Clear authentication markers
+      clearAuthMarkers();
       
       // Sign out from Firebase
       await signOut(auth);

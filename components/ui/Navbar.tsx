@@ -21,17 +21,21 @@ const Navbar = () => {
   const { user, logout, loading } = useUser();
   const router = useRouter();
 
+  
+  // if(sessionStorage.getItem("userToken") === null) {
+  //   useEffect(() => {
+  //     logout();
+  //   }, []);
+  // }
+
   const handleLogout = async () => {
     try {
       console.log("Navbar: Logout button clicked");
 
-      // Show loading toast
       const loadingToast = toast.loading("Logging out...");
 
-      // Call logout from context
       await logout();
 
-      // Clear any additional session data
       localStorage.removeItem("userToken");
       localStorage.removeItem("userEmail");
       localStorage.removeItem("userId");
@@ -43,7 +47,6 @@ const Navbar = () => {
 
       console.log("Navbar: Logout successful, redirecting to home");
 
-      // Force redirect to home page
       window.location.href = "/";
     } catch (error) {
       console.error("Navbar: Logout error:", error);
@@ -51,13 +54,11 @@ const Navbar = () => {
     }
   };
 
-  // Get user display name or email
   const getUserDisplayName = () => {
     if (!user) return "";
     return user.displayName || user.email || "User";
   };
 
-  // Show loading spinner if still loading
   if (loading) {
     return (
       <header className="sticky top-0 z-50 flex items-center justify-between whitespace-nowrap navbar-glass px-6 sm:px-10 py-[5px]">

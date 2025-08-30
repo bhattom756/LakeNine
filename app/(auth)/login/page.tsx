@@ -25,7 +25,6 @@ export default function LoginPage() {
     margin: "0 auto",
   };
 
-  // Check for redirect results on initial load
   useEffect(() => {
     console.log("Login page loaded, checking for redirect results");
     
@@ -40,11 +39,9 @@ export default function LoginPage() {
           console.log("Successfully authenticated user after redirect:", result.user.email);
           toast.success("Signed in with Google successfully!");
           
-          // Get the stored redirect path or default to home page
           const redirectPath = localStorage.getItem('authRedirectPath') || '/';
           localStorage.removeItem('authRedirectPath'); // Clear it
           
-          // Add a delay before redirecting to ensure the toast is shown
           setTimeout(() => {
             router.push(redirectPath);
           }, 500);
