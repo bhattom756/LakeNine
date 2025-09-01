@@ -1,10 +1,12 @@
 import weaviate, { ApiKey } from 'weaviate-ts-client';
 
-// Component interface matching your sample.json structure exactly
+// Component interface matching your new Weaviate schema structure
 interface ComponentData {
-  component_type: string;
-  text_summary: string;
-  class_keywords: string[];
+  category: string;
+  name: string;
+  description: string;
+  tags: string[];
+  code: string;
 }
 
 // Initialize Weaviate client with proper error handling
@@ -57,30 +59,35 @@ export async function ensureWeaviateSchema() {
       return true;
     }
 
-    // Define the schema that exactly matches your sample.json structure
+    // Define the schema that matches your new Weaviate cloud structure
     const schema = {
       class: 'WebComponent',
       description: 'UI components for RAG-enhanced website generation',
       properties: [
         {
-          name: 'component_type',
+          name: 'category',
           dataType: ['text'],
-          description: 'Type of component (Hero Sections, Feature Sections, etc.)'
+          description: 'Component category (Navbar, Hero, Footer, etc.)'
         },
         {
-          name: 'text_summary',
+          name: 'name',
           dataType: ['text'],
-          description: 'Brief description of the component variant'
+          description: 'Component variant name (e.g., Dashboard Variant 6)'
         },
         {
-          name: 'class_keywords',
+          name: 'description',
+          dataType: ['text'],
+          description: 'Detailed description of the component variant'
+        },
+        {
+          name: 'tags',
           dataType: ['text[]'],
-          description: 'CSS class keywords used in the component'
+          description: 'Component tags for categorization and search'
         },
         {
           name: 'code',
           dataType: ['text'],
-          description: 'Generated React/JSX code for the component'
+          description: 'React/JSX code for the component'
         }
       ],
       vectorizer: 'text2vec-openai',
@@ -118,30 +125,35 @@ export async function resetWeaviateSchema() {
       console.log('ℹ️ WebComponent class did not exist or could not be deleted');
     }
 
-    // Create new schema with correct field names
+    // Create new schema with updated field names
     const schema = {
       class: 'WebComponent',
       description: 'UI components for RAG-enhanced website generation',
       properties: [
         {
-          name: 'component_type',
+          name: 'category',
           dataType: ['text'],
-          description: 'Type of component (Hero Sections, Feature Sections, etc.)'
+          description: 'Component category (Navbar, Hero, Footer, etc.)'
         },
         {
-          name: 'text_summary',
+          name: 'name',
           dataType: ['text'],
-          description: 'Brief description of the component variant'
+          description: 'Component variant name (e.g., Dashboard Variant 6)'
         },
         {
-          name: 'class_keywords',
+          name: 'description',
+          dataType: ['text'],
+          description: 'Detailed description of the component variant'
+        },
+        {
+          name: 'tags',
           dataType: ['text[]'],
-          description: 'CSS class keywords used in the component'
+          description: 'Component tags for categorization and search'
         },
         {
           name: 'code',
           dataType: ['text'],
-          description: 'Generated React/JSX code for the component'
+          description: 'React/JSX code for the component'
         }
       ],
       vectorizer: 'text2vec-openai',
@@ -176,13 +188,15 @@ export async function storeComponentsInWeaviate(components: ComponentData[]) {
     let batchSize = 0;
 
     for (const component of components) {
-      // Map knowledge_base.json fields to your Weaviate schema fields
+      // Map component data to new Weaviate schema fields
       const weaviateObject = {
         class: 'WebComponent',
         properties: {
-          type: component.component_type,                                    // component_type -> type
-          description: component.text_summary,                               // text_summary -> description
-          code: component.class_keywords.join(' ')                          // class_keywords array -> code string
+          category: component.category,
+          name: component.name,
+          description: component.description,
+          tags: component.tags,
+          code: component.code
         }
       };
 
@@ -211,20 +225,20 @@ export async function storeComponentsInWeaviate(components: ComponentData[]) {
   }
 }
 
-// Generate React component based on your sample.json structure
+// Generate React component based on the new schema structure
 function generateReactComponent(component: ComponentData): string {
-  const { component_type, text_summary, class_keywords } = component;
-  const componentName = component_type.replace(/\s+/g, '').replace(/[^a-zA-Z0-9]/g, '');
+  const { category, name, description, tags, code } = component;
+  const componentName = name.replace(/\s+/g, '').replace(/[^a-zA-Z0-9]/g, '');
   
   // Check if it's a dark mode variant
-  const isDarkMode = text_summary.toLowerCase().includes('dark mode');
+  const isDarkMode = description.toLowerCase().includes('dark mode') || description.toLowerCase().includes('dark theme');
   
-  // Use exact class keywords from your sample.json
-  const baseClasses = class_keywords.join(' ');
+  // Use tags as class keywords
+  const baseClasses = tags.join(' ');
   
-  // Enhanced component templates based on type with proper class usage
+  // Enhanced component templates based on category with proper class usage
   const templates: Record<string, string> = {
-    'Hero Sections': `
+    'Hero': `
 import React from 'react';
 
 const ${componentName} = () => {
@@ -257,7 +271,7 @@ const ${componentName} = () => {
 
 export default ${componentName};`,
 
-    'Feature Sections': `
+    'Feature': `
 import React from 'react';
 
 const ${componentName} = () => {
@@ -311,7 +325,7 @@ const ${componentName} = () => {
 
 export default ${componentName};`,
 
-    'Headers': `
+    'Navbar': `
 import React, { useState } from 'react';
 
 const ${componentName} = () => {
@@ -367,7 +381,7 @@ const ${componentName} = () => {
 
 export default ${componentName};`,
 
-    'Footers': `
+    'Footer': `
 import React from 'react';
 
 const ${componentName} = () => {
@@ -419,7 +433,12 @@ const ${componentName} = () => {
 export default ${componentName};`
   };
 
-  return templates[component_type] || templates['Hero Sections'];
+  // If the component has actual code, use it; otherwise use templates
+  if (code && code.trim() && code.includes('export')) {
+    return code;
+  }
+  
+  return templates[category] || templates['Hero'];
 }
 
 // Enhanced retrieval with correct field mapping
@@ -430,12 +449,12 @@ export async function retrieveComponents(query: string, limit: number = 10) {
     
     console.log('🔍 Retrieving components from Weaviate...');
     
-    // Use your actual Weaviate schema fields: type, description, code
+    // Use the new Weaviate schema fields: category, name, description, tags, code
     const response = await withTimeout(
       client.graphql
         .get()
         .withClassName('WebComponent')
-        .withFields('type description code')
+        .withFields('category name description tags code')
         .withNearText({ concepts: [query] })
         .withLimit(limit)
         .do(),
@@ -469,9 +488,9 @@ export async function retrieveComponentsByType(query: string, component_types: s
           client.graphql
             .get()
             .withClassName('WebComponent')
-            .withFields('type description code')
+            .withFields('category name description tags code')
             .withWhere({
-              path: ['type'],
+              path: ['category'],
               operator: 'Equal',
               valueText: type
             })
@@ -500,12 +519,9 @@ export async function retrieveComponentsByType(query: string, component_types: s
 export async function getWebsiteComponents(
   query: string,
   component_types: string[] = [
-    // Updated to match actual types in your Weaviate data
-    'Navbars', 'Reviews', 'Hero Sections', 'Feature Sections', 'CTA Sections', 'Bento Grids', 
-    'Pricing Sections', 'Header Sections', 'Newsletter Sections', 'Stats', 'Testimonials', 
-    'Blog Sections', 'Contact Sections', 'Team Sections', 'Content Sections', 'Logo Clouds', 
-    'FAQs', 'Footers', 'Headers', 'Flyout Menus', 'Banners', '404 Pages', 'Stacked Layouts',
-    'Sidebar Layouts', 'Multi-Column Layouts'
+    // Updated to match the new 10 component categories
+    'Navbar', 'Hero', 'Footer', 'Pricing', 'Testimonial', 
+    'CTA', 'Form', 'Feature', 'Dashboard', 'Card'
   ]
 ): Promise<any[]> {
   try {
@@ -530,10 +546,10 @@ export async function getWebsiteComponents(
       console.log('🔍 Performing general component search...');
       const generalResults = await retrieveComponents(query, 5);
       
-      // Add general results, avoiding duplicates (using correct field names)
-      const existingIds = new Set(allComponents.map(c => `${c.type}-${c.description}`));
+      // Add general results, avoiding duplicates (using new field names)
+      const existingIds = new Set(allComponents.map(c => `${c.category}-${c.name}`));
       for (const component of generalResults) {
-        const id = `${component.type}-${component.description}`;
+        const id = `${component.category}-${component.name}`;
         if (!existingIds.has(id)) {
           allComponents.push(component);
         }

@@ -15,7 +15,6 @@
 ![Mongoose](https://img.shields.io/badge/Mongoose-informational?style=flat&logo=mongoose&logoColor=white&color=maroon)  
 ![Firebase](https://img.shields.io/badge/Firebase-informational?style=flat&logo=firebase&logoColor=white&color=orange)  
 ![JavaScript](https://img.shields.io/badge/JavaScript-informational?style=flat&logo=javascript&logoColor=white&color=yellow)  
-![Pexels](https://img.shields.io/badge/Pexels-informational?style=flat&logo=pexels&logoColor=white&color=green)  
 ![React](https://img.shields.io/badge/React-informational?style=flat&logo=react&logoColor=white&color=blue)  
 ![TypeScript](https://img.shields.io/badge/TypeScript-informational?style=flat&logo=typescript&logoColor=white&color=blue)  
 ![ESLint](https://img.shields.io/badge/ESLint-informational?style=flat&logo=eslint&logoColor=white&color=purple)  

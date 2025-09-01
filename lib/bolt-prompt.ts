@@ -257,7 +257,8 @@ FORBIDDEN BEHAVIORS:
 ❌ DO NOT create incomplete or skeleton websites
 
 FOR BUSINESS WEBSITES (hospitals, gyms, restaurants, etc.):
-- Include comprehensive sections: Header/Nav, Hero, About, Services/Programs, Features, Team/Staff, Testimonials, Pricing (if applicable), Contact, Footer
+- MANDATORY: Include ALL comprehensive sections: Header/Nav, Hero, About, Services/Programs, Features, Team/Staff, Testimonials, Pricing (if applicable), Contact, Footer
+- CRITICAL: Footer.jsx component MUST be generated and imported in App.jsx
 - Add professional content relevant to the business type
 - Include forms, interactive elements, and proper navigation
 - MANDATORY: Use /*IMAGE:category*/ placeholders in EVERY component (logo, hero, service, team, about, office)

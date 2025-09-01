@@ -1,8 +1,8 @@
 // pages/api/genCode.ts
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getWebsiteComponents, resetWeaviateSchema } from '@/lib/weaviate';
-import { fetchPexelsImages, processImagesInCode } from '@/lib/pexels';
 import { getSystemPrompt } from '@/lib/bolt-prompt';
+import { pixabayAPI, detectBusinessType } from '@/lib/pixabay';
 import OpenAI from 'openai';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -232,7 +232,7 @@ function validateWebsiteQuality(files: Record<string, string>, aiResponse: strin
     }
   }
   
-  console.log('📊 Component sizes:', componentSizes.join(', '));
+
   
   if (!hasSubstantialComponents) {
     issues.push('No substantial React components found (all components under 400 characters)');
@@ -264,40 +264,8 @@ function validateWebsiteQuality(files: Record<string, string>, aiResponse: strin
   const hasLogo = allContent.includes('/*IMAGE:logo*/');
   const hasHeroImage = allContent.includes('/*IMAGE:hero*/');
   
-  console.log(`📷 Image validation: Found ${imagePlaceholders.length} image placeholders`);
-  console.log(`📷 Found ${regularImgTags} regular img tags`);
-  console.log(`📷 Has logo: ${hasLogo}, Has hero image: ${hasHeroImage}`);
-  console.log(`📷 Image types found: ${imagePlaceholders.join(', ')}`);
-  
   // RELAXED VALIDATION: Accept websites with minimal strategic images
   const totalImageElements = imagePlaceholders.length + regularImgTags;
-  
-  if (totalImageElements === 0) {
-    console.log(`🔧 INFO: No images found - this is acceptable for text-focused websites`);
-    // Don't add as critical issue - some websites don't need images
-  } else if (imagePlaceholders.length === 0 && regularImgTags > 0) {
-    console.log(`🔧 INFO: Found ${regularImgTags} regular img tags - will selectively convert key components`);
-  }
-  
-  // Only suggest improvements for specific image types
-  if (imagePlaceholders.length > 0 || regularImgTags > 0) {
-    if (!hasLogo && (allContent.includes('Navbar') || allContent.includes('Header'))) {
-      console.log(`💡 SUGGESTION: Could add logo to navbar for branding`);
-    }
-    if (!hasHeroImage && allContent.includes('Hero')) {
-      console.log(`💡 SUGGESTION: Could add hero image for visual impact`);
-    }
-  }
-  
-  // Additional debugging for image failures
-  if (totalImageElements === 0) {
-    console.error('🔍 DEBUG: Searching for any image-related content...');
-    const imageKeywords = ['img', 'image', 'IMAGE', 'src=', 'alt='];
-    imageKeywords.forEach(keyword => {
-      const count = (allContent.match(new RegExp(keyword, 'gi')) || []).length;
-      console.error(`🔍 Found "${keyword}" ${count} times in generated content`);
-    });
-  }
   
   // Separate critical image failures from other issues (updated for new validation)
   const criticalImageFailures = issues.filter(issue => 
@@ -312,7 +280,7 @@ function validateWebsiteQuality(files: Record<string, string>, aiResponse: strin
     !issue.includes('Missing hero')
   );
   
-  console.log(`🔍 Critical image failures: ${criticalImageFailures.length}, Other issues: ${otherIssues.length}`);
+
   
   return {
     isValid: criticalImageFailures.length === 0 && otherIssues.length <= 4, // Zero tolerance for missing images
@@ -990,33 +958,30 @@ function buildRAGContextFromArray(components: any[], websiteType: string, isDark
   let context = "## 🎯 MANDATORY: Use These Retrieved Components\n\n";
   context += "You MUST create a complete website using the components below. Do NOT generate a minimal website.\n\n";
   
-  // Group components by type (using actual field names from Weaviate schema)
+  // Group components by category (using new field names from Weaviate schema)
   const groupedComponents: Record<string, any[]> = {};
   components.forEach(component => {
-    const type = component.type || component.component_type || 'General';
-    if (!groupedComponents[type]) {
-      groupedComponents[type] = [];
+    const category = component.category || 'General';
+    if (!groupedComponents[category]) {
+      groupedComponents[category] = [];
     }
-    groupedComponents[type].push(component);
+    groupedComponents[category].push(component);
   });
   
-  // Build context for each type with actual code
-  for (const [type, comps] of Object.entries(groupedComponents)) {
-    context += `### ${type} (${comps.length} variants available)\n`;
+  // Build context for each category with actual code
+  for (const [category, comps] of Object.entries(groupedComponents)) {
+    context += `### ${category} (${comps.length} variants available)\n`;
     comps.forEach((component, index) => {
-      const summary = component.description || component.text_summary || `${type} variant ${index + 1}`;
+      const name = component.name || `${category} Variant ${index + 1}`;
+      const summary = component.description || `High-quality ${category.toLowerCase()} component`;
       
-      // Extract keywords from either class_keywords array or code string
+      // Extract keywords from tags array
       let keywords = '';
-      if (Array.isArray(component.class_keywords)) {
-        const validClasses = filterValidTailwindClasses(component.class_keywords);
-        keywords = validClasses.join(' ');
-      } else if (component.code && typeof component.code === 'string') {
-        const classList = component.code.split(/\s+/);
-        const validClasses = filterValidTailwindClasses(classList);
+      if (Array.isArray(component.tags)) {
+        const validClasses = filterValidTailwindClasses(component.tags);
         keywords = validClasses.join(' ');
       } else {
-        const extracted = extractTailwindClassesFromDescription(component.description || component.text_summary);
+        const extracted = extractTailwindClassesFromDescription(component.description);
         if (extracted) {
           const classList = extracted.split(', ').map(c => c.trim());
           const validClasses = filterValidTailwindClasses(classList);
@@ -1026,12 +991,13 @@ function buildRAGContextFromArray(components: any[], websiteType: string, isDark
         }
       }
       
-      context += `- **${summary}**: MANDATORY Tailwind classes to use: "${keywords}"\n`;
+      context += `- **${name}**: ${summary}\n`;
+      context += `  MANDATORY Tailwind classes to use: "${keywords}"\n`;
       context += `  Apply these classes directly to create attractive, modern design\n`;
       
-      // Include actual code if available and it's longer than just class names
-      if (component.code && component.code.length > 50 && component.code.includes('<')) {
-        context += `  Code example: ${component.code.substring(0, 200)}...\n`;
+      // Include actual code if available
+      if (component.code && component.code.length > 50 && component.code.includes('React')) {
+        context += `  Code example: ${component.code.substring(0, 300)}...\n`;
       }
     });
     context += "\n";
@@ -1068,19 +1034,13 @@ function buildRAGContextFromArray(components: any[], websiteType: string, isDark
 function getAllUniqueClasses(components: any[]): string {
   const allClasses = new Set<string>();
   components.forEach(comp => {
-    // Handle both old format (class_keywords array) and new format (code string)
-    if (Array.isArray(comp.class_keywords)) {
-      comp.class_keywords.forEach((cls: string) => allClasses.add(cls));
-    } else if (comp.code && typeof comp.code === 'string') {
-      // Extract classes from code field (space-separated string)
-      comp.code.split(' ').forEach((cls: string) => {
-        const trimmed = cls.trim();
-        if (trimmed) allClasses.add(trimmed);
-      });
+    // Handle new format with tags array
+    if (Array.isArray(comp.tags)) {
+      comp.tags.forEach((tag: string) => allClasses.add(tag));
     }
     
     // Also extract from description
-    const extracted = extractTailwindClassesFromDescription(comp.description || comp.text_summary);
+    const extracted = extractTailwindClassesFromDescription(comp.description);
     if (extracted) {
       extracted.split(', ').forEach(cls => allClasses.add(cls.trim()));
     }
@@ -1581,163 +1541,35 @@ body {
       console.warn('🔍 Expected at least 5-8 files for a comprehensive website');
     }
     
-          // Step 5: Process images in all files using enhanced Pexels integration
+          // Step 5: Process images in all files using Pixabay integration
     const processedFiles: Record<string, string> = {};
+    const businessType = detectBusinessType(prompt);
     
-    for (const [path, content] of Object.entries(files)) {
-      if (typeof content === 'string') {
-        // CRITICAL: Check for image placeholders BEFORE any processing
-        console.log(`🖼️  Processing images for ${path}...`);
-        const imagesBefore = (content.match(/\/\*IMAGE:[^*]+\*\//g) || []).length;
-        console.log(`🔍 Found ${imagesBefore} image placeholders in ${path} before processing`);
-        
-        // Log the raw content to see if AI included images
-        if (path.includes('components/')) {
-          const hasLogo = content.includes('/*IMAGE:logo*/');
-          const hasHero = content.includes('/*IMAGE:hero*/');
-          const hasService = content.includes('/*IMAGE:service*/');
-          const hasTeam = content.includes('/*IMAGE:team*/');
-          const hasAbout = content.includes('/*IMAGE:about*/');
-          const hasOffice = content.includes('/*IMAGE:office*/');
-          
-          console.log(`🔍 ${path} image check: logo=${hasLogo}, hero=${hasHero}, service=${hasService}, team=${hasTeam}, about=${hasAbout}, office=${hasOffice}`);
-          
-          if (imagesBefore === 0) {
-            console.error(`🚨 CRITICAL: ${path} has NO image placeholders - AI ignored instructions!`);
-            console.error(`🔍 ${path} content preview: ${content.substring(0, 500)}...`);
-          }
-        }
-        
-        // SELECTIVE IMAGE CONVERSION: Only convert images for key components (hero, navbar, cards)
-        let processedContent = content;
-        
-        if (imagesBefore === 0 && content.includes('<img')) {
-          const shouldConvertImages = 
-            path.includes('Navbar') || 
-            path.includes('Header') || 
-            path.includes('Hero') ||
-            path.includes('Card') ||
-            path.includes('Service') ||  // Services often use card layouts
-            path.includes('Feature') ||  // Features often use card layouts
-            path.includes('Testimonial'); // Testimonials often use card layouts
-          
-          if (shouldConvertImages) {
-            console.log(`🔧 SELECTIVE CONVERSION: Converting img tags to placeholders in ${path}`);
-            
-            // Convert only for specific high-impact components
-            if (path.includes('Navbar') || path.includes('Header')) {
-              processedContent = content.replace(/<img[^>]*src=["'][^"']*["'][^>]*>/gi, '<img src="/*IMAGE:logo*/" alt="Company Logo" className="h-10 w-10 rounded-lg shadow-md object-cover" />');
-            } else if (path.includes('Hero')) {
-              processedContent = content.replace(/<img[^>]*src=["'][^"']*["'][^>]*>/gi, '<img src="/*IMAGE:hero*/" alt="Hero Background" className="w-full h-full object-cover opacity-40" />');
-            } else if (path.includes('Service')) {
-              processedContent = content.replace(/<img[^>]*src=["'][^"']*["'][^>]*>/gi, '<img src="/*IMAGE:service*/" alt="Service" className="w-16 h-16 mx-auto mb-4 rounded-lg object-cover" />');
-            } else if (path.includes('Feature')) {
-              processedContent = content.replace(/<img[^>]*src=["'][^"']*["'][^>]*>/gi, '<img src="/*IMAGE:feature*/" alt="Feature" className="w-16 h-16 mx-auto mb-4 rounded-lg object-cover" />');
-            } else if (path.includes('Testimonial')) {
-              processedContent = content.replace(/<img[^>]*src=["'][^"']*["'][^>]*>/gi, '<img src="/*IMAGE:testimonial*/" alt="Customer" className="w-16 h-16 rounded-full object-cover" />');
-            }
-            
-            const newPlaceholders = (processedContent.match(/\/\*IMAGE:[^*]+\*\//g) || []).length;
-            console.log(`🔧 CONVERTED: ${path} now has ${newPlaceholders} image placeholders`);
+    console.log(`Processing ${businessType} website with image integration...`);
+    
+    // Process each file and replace image placeholders with actual Pixabay URLs
+    for (const [fileName, fileContent] of Object.entries(files)) {
+      try {
+        // Only process files that might contain image placeholders (React components, HTML)
+        if (fileName.endsWith('.jsx') || fileName.endsWith('.tsx') || fileName.endsWith('.html')) {
+          // Check if file contains image placeholders
+          if (fileContent.includes('/*IMAGE:')) {
+            const processedContent = await pixabayAPI.processImagePlaceholders(fileContent, businessType);
+            processedFiles[fileName] = processedContent;
           } else {
-            console.log(`⏭️  SKIPPING: ${path} - not a priority component for images`);
+            // No image placeholders, keep original content
+            processedFiles[fileName] = fileContent;
           }
+        } else {
+          // Non-component files (package.json, config files, etc.) - keep as-is
+          processedFiles[fileName] = fileContent;
         }
-        
-        // Now process the placeholders with Pexels
-        processedContent = await processImagesInCode(processedContent);
-        
-        const imagesAfter = (processedContent.match(/\/\*IMAGE:[^*]+\*\//g) || []).length;
-        const imageUrls = (processedContent.match(/https:\/\/images\.pexels\.com\/[^"'\s)]+/g) || []).length;
-        
-        console.log(`✅ Images processed for ${path}: ${imagesBefore} placeholders → ${imagesAfter} remaining, ${imageUrls} Pexels URLs added`);
-        
-        // Convert Next.js package.json to Vite if needed
-        if (path === 'package.json') {
-          processedContent = convertNextJSPackageToVite(processedContent);
-        }
-        
-        // Special handling for CSS files to ensure they're valid
-        if (path.endsWith('.css')) {
-          // Ensure CSS starts properly and doesn't have JavaScript syntax
-          console.log(`🔍 Processing CSS file: ${path}`);
-          processedContent = cleanCSSContent(processedContent);
-          
-          // Enhanced CSS malformation detection and fixing
-          if (processedContent.includes('} }') || 
-              processedContent.includes('{ {') || 
-              /^\s*\}\s*$/m.test(processedContent) ||
-              /^\s*\{\s*$/m.test(processedContent)) {
-            console.log(`🔧 FIXING: Removing malformed CSS structures in ${path}`);
-            
-            // Fix duplicate braces
-            processedContent = processedContent.replace(/\}\s*\}/g, '}').replace(/\{\s*\{/g, '{');
-            
-            // Remove orphaned braces
-            processedContent = processedContent.replace(/^\s*\}\s*$/gm, '');
-            processedContent = processedContent.replace(/^\s*\{\s*$/gm, '');
-            
-            // Clean up extra newlines
-            processedContent = processedContent.replace(/\n\s*\n\s*\n/g, '\n\n');
-          }
-          
-          console.log(`✅ CSS cleaned for ${path}: ${processedContent.substring(0, 100)}...`);
-        }
-        
-        processedFiles[path] = processedContent;
-      } else if (typeof content === 'object' && content !== null) {
-        // Convert objects to JSON strings (for package.json, etc.)
-        try {
-          let jsonContent = JSON.stringify(content, null, 2);
-          
-          // Convert Next.js package.json to Vite if needed
-          if (path === 'package.json') {
-            jsonContent = convertNextJSPackageToVite(jsonContent);
-          }
-          
-          // Special handling for CSS files even if they come as objects
-          if (path.endsWith('.css')) {
-            console.log(`🔍 Processing CSS object for: ${path}`);
-            jsonContent = cleanCSSContent(jsonContent);
-            
-            // Enhanced CSS malformation detection and fixing
-            if (jsonContent.includes('} }') || 
-                jsonContent.includes('{ {') || 
-                /^\s*\}\s*$/m.test(jsonContent) ||
-                /^\s*\{\s*$/m.test(jsonContent)) {
-              console.log(`🔧 FIXING: Removing malformed CSS structures in ${path}`);
-              
-              // Fix duplicate braces
-              jsonContent = jsonContent.replace(/\}\s*\}/g, '}').replace(/\{\s*\{/g, '{');
-              
-              // Remove orphaned braces
-              jsonContent = jsonContent.replace(/^\s*\}\s*$/gm, '');
-              jsonContent = jsonContent.replace(/^\s*\{\s*$/gm, '');
-              
-              // Clean up extra newlines
-              jsonContent = jsonContent.replace(/\n\s*\n\s*\n/g, '\n\n');
-            }
-            
-            console.log(`✅ CSS object cleaned for ${path}: ${jsonContent.substring(0, 100)}...`);
-          }
-          
-          const imagesBefore = (jsonContent.match(/\/\*IMAGE:[^*]+\*\//g) || []).length;
-          const processedJsonContent = await processImagesInCode(jsonContent);
-          const imagesAfter = (processedJsonContent.match(/\/\*IMAGE:[^*]+\*\//g) || []).length;
-          const imageUrls = (processedJsonContent.match(/https:\/\/images\.pexels\.com\/[^"'\s)]+/g) || []).length;
-          
-          console.log(`🖼️  ${path}: ${imagesBefore} placeholders → ${imagesAfter} remaining, ${imageUrls} URLs added`);
-          processedFiles[path] = processedJsonContent;
-        } catch {
-          processedFiles[path] = String(content);
-        }
-      } else {
-        // Convert any other type to string
-        processedFiles[path] = String(content || '');
+      } catch (error) {
+        console.error(`Error processing images in ${fileName}:`, error);
+        // On error, keep original content with placeholders
+        processedFiles[fileName] = fileContent;
       }
     }
-    
-    console.log(`🖼️  Processed images for all files`);
     
     // Step 6: Add essential Vite files if missing or fix truncated files
     if (!processedFiles['vite.config.js']) {
@@ -1766,7 +1598,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <App />
   </React.StrictMode>,
 )`;
-      console.log('✅ Added missing src/main.jsx');
     }
     
     // Check for truncated or malformed HTML
@@ -1790,7 +1621,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   <script type="module" src="/src/main.jsx"></script>
 </body>
 </html>`;
-      console.log('✅ Fixed/Added index.html');
+
     }
     
     // Ensure we have src/index.css for Tailwind
@@ -1820,27 +1651,62 @@ body {
   width: 100%;
   min-height: 100vh;
 }`;
-      console.log('✅ Added missing src/index.css');
     }
     
-    // Ensure we have an App.jsx file
-    if (!processedFiles['src/App.jsx'] && !processedFiles['App.jsx']) {
+    // Ensure we have an App.jsx file with proper component imports
+    const existingAppPath = processedFiles['src/App.jsx'] ? 'src/App.jsx' : processedFiles['App.jsx'] ? 'App.jsx' : null;
+    
+    if (existingAppPath) {
+      // Check if Footer is imported and add it if missing
+      let appContent = processedFiles[existingAppPath];
+      
+      // Check if Footer component exists
+      const hasFooterComponent = processedFiles['src/components/Footer.jsx'] || processedFiles['components/Footer.jsx'];
+      
+      if (hasFooterComponent && !appContent.includes('Footer')) {
+        // Add Footer import if missing
+        if (appContent.includes('import React')) {
+          appContent = appContent.replace(
+            /(import React[^;]+;)/,
+            '$1\nimport Footer from \'./components/Footer\';'
+          );
+        }
+        
+        // Add Footer component to JSX if not present
+        if (!appContent.includes('<Footer')) {
+          appContent = appContent.replace(
+            /(\s*<\/div>\s*\)\s*}\s*export default)/,
+            '      <Footer />\n$1'
+          );
+        }
+        
+        processedFiles[existingAppPath] = appContent;
+
+      }
+    } else if (!processedFiles['src/App.jsx'] && !processedFiles['App.jsx']) {
       // Check if we have any page files that should be the main App
       const hasHomePage = processedFiles['src/Home.jsx'] || processedFiles['Home.jsx'];
       const hasIndexPage = processedFiles['src/index.jsx'] || processedFiles['index.jsx'];
+      const hasFooterComponent = processedFiles['src/components/Footer.jsx'] || processedFiles['components/Footer.jsx'];
       
       if (hasHomePage || hasIndexPage) {
         // Create an App.jsx that imports the home/index page
         const mainComponent = hasHomePage ? 'Home' : 'Index';
+        const footerImport = hasFooterComponent ? "\nimport Footer from './components/Footer';" : '';
+        const footerJSX = hasFooterComponent ? '\n      <Footer />' : '';
+        
         processedFiles['src/App.jsx'] = `import React from 'react'
-import ${mainComponent} from './${mainComponent}'
+import ${mainComponent} from './${mainComponent}'${footerImport}
 
 function App() {
-  return <${mainComponent} />
+  return (
+    <div>
+      <${mainComponent} />${footerJSX}
+    </div>
+  )
 }
 
 export default App`;
-        console.log('✅ Created App.jsx wrapper for', mainComponent);
       } else {
         // Create a diagnostic App.jsx with debugging info
         console.warn('⚠️  Using fallback App.jsx - this indicates AI generation produced minimal components');
@@ -1919,7 +1785,6 @@ export default {
   },
   plugins: [],
 }`;
-      console.log('✅ Added missing tailwind.config.js');
     }
     
     // Ensure we have PostCSS config
@@ -1930,7 +1795,6 @@ export default {
     autoprefixer: {},
   },
 }`;
-      console.log('✅ Added missing postcss.config.js');
     }
     
     // Step 7: Return the enhanced result

@@ -33,7 +33,6 @@
     "mongoose": "^8.16.4",
     "next": "15.3.3",
     "openai": "^4.95.1",
-    "pexels": "^1.4.0",
     "react": "^19.0.0",
     "react-awesome-reveal": "^4.3.1",
     "react-dom": "^19.0.0",
