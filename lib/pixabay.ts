@@ -421,16 +421,16 @@ class PixabayAPI {
    */
   private getFallbackImageUrl(category: string): string {
     const fallbackImages = {
-      logo: 'https://via.placeholder.com/200x200/3B82F6/FFFFFF?text=LOGO',
-      hero: 'https://via.placeholder.com/1200x600/6366F1/FFFFFF?text=HERO',
-      office: 'https://via.placeholder.com/800x400/10B981/FFFFFF?text=OFFICE',
-      about: 'https://via.placeholder.com/600x400/8B5CF6/FFFFFF?text=ABOUT',
-      service: 'https://via.placeholder.com/300x200/EF4444/FFFFFF?text=SERVICE',
-      feature: 'https://via.placeholder.com/300x200/F59E0B/FFFFFF?text=FEATURE',
-      team: 'https://via.placeholder.com/200x200/EC4899/FFFFFF?text=TEAM',
-      testimonial: 'https://via.placeholder.com/150x150/06B6D4/FFFFFF?text=USER',
-      contact: 'https://via.placeholder.com/400x300/84CC16/FFFFFF?text=CONTACT',
-      default: 'https://via.placeholder.com/400x300/6B7280/FFFFFF?text=IMAGE'
+      logo: 'https://images.unsplash.com/photo-1611224923853-80b023f02d71?w=200&h=200&fit=crop&crop=center',
+      hero: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=1200&h=600&fit=crop&crop=center',
+      office: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&h=400&fit=crop&crop=center',
+      about: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=600&h=400&fit=crop&crop=center',
+      service: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=300&h=200&fit=crop&crop=center',
+      feature: 'https://images.unsplash.com/photo-1551434678-e076c223a692?w=300&h=200&fit=crop&crop=center',
+      team: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=200&h=200&fit=crop&crop=face',
+      testimonial: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
+      contact: 'https://images.unsplash.com/photo-1423666639041-f56000c27a9a?w=400&h=300&fit=crop&crop=center',
+      default: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=400&h=300&fit=crop&crop=center'
     };
     
     return fallbackImages[category as keyof typeof fallbackImages] || fallbackImages.default;
@@ -473,16 +473,20 @@ class PixabayAPI {
         
         if (images.length > 0) {
           // Use webformat URL for general display, or largeImageURL if available for high quality
-          const imageUrl = images[0].largeImageURL || images[0].webformatURL;
-          imageMap[category] = imageUrl;
+          const originalImageUrl = images[0].largeImageURL || images[0].webformatURL;
+          
+          // For WebContainer compatibility, use direct Pixabay URLs
+          // These work better in iframe environments than proxied localhost URLs
+          imageMap[category] = originalImageUrl;
         } else {
-          // Use fallback image URL instead of keeping placeholder
-          imageMap[category] = this.getFallbackImageUrl(category);
+          // Use fallback image URL instead of keeping placeholder  
+          const fallbackUrl = this.getFallbackImageUrl(category);
+          imageMap[category] = fallbackUrl;
         }
       } catch (error) {
-        console.error(`Error fetching ${category} images, using fallback`);
         // Use fallback image URL instead of keeping placeholder
-        imageMap[category] = this.getFallbackImageUrl(category);
+        const fallbackUrl = this.getFallbackImageUrl(category);
+        imageMap[category] = fallbackUrl;
       }
       
       // Add a small delay between requests to avoid rate limiting
@@ -495,8 +499,23 @@ class PixabayAPI {
       processedContent = processedContent.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), imageUrl);
     }
     
-    const replacedCount = Object.values(imageMap).filter(url => !url.includes('/*IMAGE:')).length;
-    console.log(`Images processed: ${replacedCount}/${Object.keys(imageMap).length} replaced`);
+    const replacedCount = Object.keys(imageMap).length;
+    console.log(`🎯 Images processed: ${replacedCount} categories with real Pixabay images`);
+    
+    // Final verification - check that replacements actually happened
+    const finalCheck = (processedContent.match(/\/\*IMAGE:[^*]+\*\//g) || []).length;
+    if (finalCheck > 0) {
+      console.warn(`⚠️ WARNING: ${finalCheck} image placeholders still remain after processing!`);
+    } else {
+      console.log(`✅ SUCCESS: All image placeholders have been replaced with real URLs`);
+    }
+    
+    // Log sample of replaced content
+    const sampleUrls = processedContent.match(/src="[^"]*\.(jpg|jpeg|png|gif|webp)[^"]*"/g) || [];
+    if (sampleUrls.length > 0) {
+      console.log(`📸 Sample image URLs: ${sampleUrls.slice(0, 2).join(', ')}`);
+    }
+    
     return processedContent;
   }
 

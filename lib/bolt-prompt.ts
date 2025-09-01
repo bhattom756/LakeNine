@@ -220,22 +220,52 @@ Do not include any other code blocks or explanations. Only output the plan and t
 export function getBoltPromptForWebGeneration(): string {
   return `${BOLT_SYSTEM_PROMPT}
 
-🔥🔥🔥 URGENT: IMAGE REQUIREMENT - READ FIRST 🔥🔥🔥
+🚨🚨🚨 CRITICAL IMAGE REQUIREMENTS - MANDATORY 🚨🚨🚨
 
-YOUR RESPONSE WILL BE AUTOMATICALLY REJECTED IF YOU DO NOT INCLUDE IMAGE PLACEHOLDERS.
+⚠️  YOUR RESPONSE WILL BE AUTOMATICALLY REJECTED IF YOU DO NOT FOLLOW THIS EXACTLY ⚠️
 
-MANDATORY: Every React component MUST include /*IMAGE:category*/ placeholders EXACTLY as shown:
+🔴 MANDATORY IMAGE PLACEHOLDERS - NO EXCEPTIONS 🔴
 
-Navbar.jsx MUST contain: <img src="/*IMAGE:logo*/" alt="Logo" className="h-10 w-10" />
-Hero.jsx MUST contain: <img src="/*IMAGE:hero*/" alt="Hero" className="w-full h-full object-cover" />
-Services.jsx MUST contain: <img src="/*IMAGE:service*/" alt="Service" className="w-16 h-16" />
-About.jsx MUST contain: <img src="/*IMAGE:about*/" alt="About" className="w-full h-64" />
-Team.jsx MUST contain: <img src="/*IMAGE:team*/" alt="Team" className="w-24 h-24" />
-Contact.jsx MUST contain: <img src="/*IMAGE:office*/" alt="Office" className="w-full h-48" />
+EVERY SINGLE React component file MUST contain the EXACT image placeholder syntax shown below.
+These placeholders will be automatically replaced with real, contextual images.
 
-DO NOT MODIFY THE /*IMAGE:category*/ SYNTAX. COPY EXACTLY.
+✅ REQUIRED IN EVERY COMPONENT:
 
-IF YOU DO NOT INCLUDE THESE, YOUR RESPONSE WILL BE REJECTED.
+📌 Navbar/Header components MUST include:
+<img src="/*IMAGE:logo*/" alt="Company Logo" className="h-10 w-10 rounded-lg object-cover" />
+
+📌 Hero sections MUST include:
+<img src="/*IMAGE:hero*/" alt="Hero Background" className="w-full h-full object-cover opacity-40" />
+
+📌 Service/Feature cards MUST include:
+<img src="/*IMAGE:service*/" alt="Service" className="w-16 h-16 mx-auto mb-4 rounded-lg object-cover" />
+
+📌 About sections MUST include:
+<img src="/*IMAGE:about*/" alt="About Us" className="w-full h-64 object-cover rounded-lg" />
+
+📌 Team sections MUST include:
+<img src="/*IMAGE:team*/" alt="Team Member" className="w-24 h-24 rounded-full object-cover" />
+
+📌 Contact sections MUST include:
+<img src="/*IMAGE:office*/" alt="Office Location" className="w-full h-48 object-cover rounded-lg" />
+
+📌 Feature highlights MUST include:
+<img src="/*IMAGE:feature*/" alt="Feature" className="w-16 h-16 mx-auto mb-4 rounded-lg object-cover" />
+
+📌 Testimonial sections MUST include:
+<img src="/*IMAGE:testimonial*/" alt="Customer" className="w-16 h-16 rounded-full object-cover" />
+
+🚨 CRITICAL RULES:
+1. Use EXACTLY this syntax: /*IMAGE:category*/ - DO NOT change it
+2. EVERY component must have at least one image
+3. Use the correct category for each section type
+4. Include proper Tailwind classes for responsive design
+5. NO external URLs - only use the placeholder syntax
+
+❌ WRONG: <img src="https://example.com/image.jpg" />
+✅ CORRECT: <img src="/*IMAGE:logo*/" alt="Logo" className="h-10 w-10" />
+
+IF ANY COMPONENT LACKS IMAGE PLACEHOLDERS, YOUR RESPONSE WILL BE REJECTED.
 
 🚨 CRITICAL PRODUCTION WEBSITE REQUIREMENTS 🚨
 
@@ -270,7 +300,7 @@ Output format (MANDATORY):
 
 \`\`\`json
 {
-  "package.json": "<complete package.json with all dependencies>",
+  "package.json": "<complete package.json with ALL required dependencies including react-refresh>",
   "index.html": "<complete HTML file with proper meta tags>",
   "src/main.jsx": "<React entry point>",
   "src/App.jsx": "<main App component importing ALL other components>",

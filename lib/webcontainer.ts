@@ -21,6 +21,7 @@ export const defaultFiles: FileSystemTree = {
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-refresh": "^0.14.0",
     "tailwindcss": "^3.4.0",
     "@tailwindcss/forms": "^0.5.7"
   },

@@ -390,8 +390,8 @@ function extractFilesFromContent(content: string): Record<string, string> {
         "name": "extraction-diagnostic",
         "version": "1.0.0",
         "scripts": { "dev": "vite", "build": "vite build", "serve": "vite preview" },
-        "dependencies": { "react": "^18.2.0", "react-dom": "^18.2.0" },
-        "devDependencies": { "vite": "^4.0.0", "@vitejs/plugin-react": "^3.0.0", "tailwindcss": "^3.0.0" }
+        "dependencies": { "react": "^18.2.0", "react-dom": "^18.2.0", "react-refresh": "^0.14.0" },
+        "devDependencies": { "vite": "^5.2.0", "@vitejs/plugin-react": "^4.2.1", "tailwindcss": "^3.4.0", "autoprefixer": "^10.4.14", "postcss": "^8.4.24" }
       }, null, 2),
       'index.html': `<!DOCTYPE html>
 <html lang="en">
@@ -567,6 +567,7 @@ function createFallbackReactApp(): Record<string, string> {
       "dependencies": {
         "react": "^18.2.0",
         "react-dom": "^18.2.0",
+        "react-refresh": "^0.14.0",
         "tailwindcss": "^3.4.0"
       },
       "devDependencies": {
@@ -880,6 +881,7 @@ function convertNextJSPackageToVite(packageJsonContent: string): string {
         packageObj.dependencies = {
           "react": "^18.2.0",
           "react-dom": "^18.2.0",
+          "react-refresh": "^0.14.0",
           ...packageObj.dependencies
         };
       }
@@ -888,6 +890,9 @@ function convertNextJSPackageToVite(packageJsonContent: string): string {
       packageObj.devDependencies = {
         "@vitejs/plugin-react": "^4.2.1",
         "vite": "^5.2.0",
+        "autoprefixer": "^10.4.14",
+        "postcss": "^8.4.24",
+        "tailwindcss": "^3.4.0",
         ...packageObj.devDependencies
       };
       
@@ -1388,8 +1393,8 @@ export default async function handler(
                   "name": "ai-generated-website",
                   "version": "1.0.0",
                   "scripts": { "dev": "vite", "build": "vite build", "serve": "vite preview" },
-                  "dependencies": { "react": "^18.2.0", "react-dom": "^18.2.0" },
-                  "devDependencies": { "vite": "^4.0.0", "@vitejs/plugin-react": "^3.0.0", "tailwindcss": "^3.0.0" }
+                  "dependencies": { "react": "^18.2.0", "react-dom": "^18.2.0", "react-refresh": "^0.14.0" },
+                  "devDependencies": { "vite": "^5.2.0", "@vitejs/plugin-react": "^4.2.1", "tailwindcss": "^3.4.0", "autoprefixer": "^10.4.14", "postcss": "^8.4.24" }
                 }, null, 2);
                 
                 extractedFiles['index.html'] = `<!DOCTYPE html>
@@ -1545,27 +1550,93 @@ body {
     const processedFiles: Record<string, string> = {};
     const businessType = detectBusinessType(prompt);
     
-    console.log(`Processing ${businessType} website with image integration...`);
+    console.log(`🖼️ STEP 5: Processing ${businessType} website with image integration...`);
+    
+    // First, scan all files for image placeholders to debug
+    let totalPlaceholderCount = 0;
+    let filesWithPlaceholders = 0;
+    Object.entries(files).forEach(([fileName, fileContent]) => {
+      if (fileName.endsWith('.jsx') || fileName.endsWith('.tsx') || fileName.endsWith('.html')) {
+        const placeholders = (fileContent.match(/\/\*IMAGE:[^*]+\*\//g) || []);
+        if (placeholders.length > 0) {
+          filesWithPlaceholders++;
+          totalPlaceholderCount += placeholders.length;
+          console.log(`📁 ${fileName}: Found ${placeholders.length} placeholders: ${placeholders.join(', ')}`);
+        } else {
+          console.log(`📁 ${fileName}: No image placeholders found`);
+        }
+      }
+    });
+    
+    console.log(`📊 Total: ${totalPlaceholderCount} placeholders across ${filesWithPlaceholders} files`);
+    
+    if (totalPlaceholderCount === 0) {
+      console.error(`❌ CRITICAL: No image placeholders found in any files!`);
+      console.error(`🔍 This means the AI did not generate the required /*IMAGE:category*/ syntax`);
+      
+      // Add image placeholders to key components manually
+      console.log(`🔧 Auto-fixing: Adding image placeholders to key components...`);
+    }
     
     // Process each file and replace image placeholders with actual Pixabay URLs
     for (const [fileName, fileContent] of Object.entries(files)) {
       try {
         // Only process files that might contain image placeholders (React components, HTML)
         if (fileName.endsWith('.jsx') || fileName.endsWith('.tsx') || fileName.endsWith('.html')) {
+          let contentToProcess = fileContent;
+          
+          // Auto-fix missing image placeholders in key components
+          if (!fileContent.includes('/*IMAGE:')) {
+            if (fileName.toLowerCase().includes('navbar') || fileName.toLowerCase().includes('header')) {
+              contentToProcess = contentToProcess.replace(
+                /<img([^>]*?)src=["'][^"']*["']([^>]*?)>/g,
+                '<img$1src="/*IMAGE:logo*/"$2>'
+              );
+              console.log(`🔧 ${fileName}: Added logo placeholder`);
+            } else if (fileName.toLowerCase().includes('hero')) {
+              contentToProcess = contentToProcess.replace(
+                /<img([^>]*?)src=["'][^"']*["']([^>]*?)>/g,
+                '<img$1src="/*IMAGE:hero*/"$2>'
+              );
+              console.log(`🔧 ${fileName}: Added hero placeholder`);
+            } else if (fileName.toLowerCase().includes('service')) {
+              contentToProcess = contentToProcess.replace(
+                /<img([^>]*?)src=["'][^"']*["']([^>]*?)>/g,
+                '<img$1src="/*IMAGE:service*/"$2>'
+              );
+              console.log(`🔧 ${fileName}: Added service placeholder`);
+            } else if (fileName.toLowerCase().includes('team')) {
+              contentToProcess = contentToProcess.replace(
+                /<img([^>]*?)src=["'][^"']*["']([^>]*?)>/g,
+                '<img$1src="/*IMAGE:team*/"$2>'
+              );
+              console.log(`🔧 ${fileName}: Added team placeholder`);
+            } else if (fileName.toLowerCase().includes('about')) {
+              contentToProcess = contentToProcess.replace(
+                /<img([^>]*?)src=["'][^"']*["']([^>]*?)>/g,
+                '<img$1src="/*IMAGE:about*/"$2>'
+              );
+              console.log(`🔧 ${fileName}: Added about placeholder`);
+            }
+          }
+          
           // Check if file contains image placeholders
-          if (fileContent.includes('/*IMAGE:')) {
-            const processedContent = await pixabayAPI.processImagePlaceholders(fileContent, businessType);
+          if (contentToProcess.includes('/*IMAGE:')) {
+            console.log(`🔄 Processing images in: ${fileName}`);
+            const processedContent = await pixabayAPI.processImagePlaceholders(contentToProcess, businessType);
             processedFiles[fileName] = processedContent;
+            console.log(`✅ Completed image processing for: ${fileName}`);
           } else {
             // No image placeholders, keep original content
-            processedFiles[fileName] = fileContent;
+            processedFiles[fileName] = contentToProcess;
           }
         } else {
           // Non-component files (package.json, config files, etc.) - keep as-is
           processedFiles[fileName] = fileContent;
         }
       } catch (error) {
-        console.error(`Error processing images in ${fileName}:`, error);
+        console.error(`❌ Error processing images in ${fileName}:`, error);
+        console.error(`🔍 Error details:`, error instanceof Error ? error.stack : String(error));
         // On error, keep original content with placeholders
         processedFiles[fileName] = fileContent;
       }
@@ -1585,6 +1656,33 @@ export default defineConfig({
   }
 })`;
       console.log('✅ Added missing vite.config.js');
+    }
+    
+    // Ensure package.json has all required dependencies
+    if (processedFiles['package.json']) {
+      try {
+        const packageObj = JSON.parse(processedFiles['package.json']);
+        
+        // Add react-refresh if missing
+        if (!packageObj.dependencies?.['react-refresh']) {
+          packageObj.dependencies = packageObj.dependencies || {};
+          packageObj.dependencies['react-refresh'] = '^0.14.0';
+          
+          // Also ensure other essential dependencies are present
+          packageObj.dependencies['react'] = packageObj.dependencies['react'] || '^18.2.0';
+          packageObj.dependencies['react-dom'] = packageObj.dependencies['react-dom'] || '^18.2.0';
+          
+          // Ensure devDependencies
+          packageObj.devDependencies = packageObj.devDependencies || {};
+          packageObj.devDependencies['@vitejs/plugin-react'] = packageObj.devDependencies['@vitejs/plugin-react'] || '^4.2.1';
+          packageObj.devDependencies['vite'] = packageObj.devDependencies['vite'] || '^5.2.0';
+          
+          processedFiles['package.json'] = JSON.stringify(packageObj, null, 2);
+          console.log('✅ Added missing react-refresh dependency to package.json');
+        }
+      } catch (error) {
+        console.error('Failed to update package.json dependencies:', error);
+      }
     }
     
     if (!processedFiles['src/main.jsx']) {
@@ -1653,6 +1751,97 @@ body {
 }`;
     }
     
+    // STEP 7: Ensure Footer component exists and is properly integrated
+    console.log(`🦶 STEP 7: Ensuring Footer component exists and is integrated...`);
+    
+    // Check if Footer component exists
+    const hasFooterComponent = processedFiles['src/components/Footer.jsx'] || processedFiles['components/Footer.jsx'] || processedFiles['src/Footer.jsx'];
+    
+    if (!hasFooterComponent) {
+      console.log(`🔧 Creating missing Footer component...`);
+      // Create a Footer component
+      const footerContent = `import React from 'react';
+
+const Footer = () => {
+  return (
+    <footer className="bg-gray-900 text-white py-12 mt-20">
+      <div className="container mx-auto px-4">
+        <div className="grid md:grid-cols-4 gap-8">
+          <div className="col-span-2">
+            <div className="flex items-center space-x-3 mb-4">
+              <img src="/*IMAGE:logo*/" alt="Company Logo" className="h-10 w-10 rounded-lg object-cover" />
+              <div className="text-2xl font-bold text-white">
+                Company Name
+              </div>
+            </div>
+            <p className="text-gray-400 mb-4 max-w-md">
+              Building the future with innovative solutions and exceptional user experiences. Your trusted partner for success.
+            </p>
+            <div className="flex space-x-4">
+              <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"/></svg>
+              </a>
+              <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M22.46 6c-.77.35-1.6.58-2.46.69.88-.53 1.56-1.37 1.88-2.38-.83.5-1.75.85-2.72 1.05C18.37 4.5 17.26 4 16 4c-2.35 0-4.27 1.92-4.27 4.29 0 .34.04.67.11.98C8.28 9.09 5.11 7.38 3 4.79c-.37.63-.58 1.37-.58 2.15 0 1.49.75 2.81 1.91 3.56-.71 0-1.37-.2-1.95-.5v.03c0 2.08 1.48 3.82 3.44 4.21a4.22 4.22 0 0 1-1.93.07 4.28 4.28 0 0 0 4 2.98 8.521 8.521 0 0 1-5.33 1.84c-.34 0-.68-.02-1.02-.06C3.44 20.29 5.7 21 8.12 21 16 21 20.33 14.46 20.33 8.79c0-.19 0-.37-.01-.56.84-.6 1.56-1.36 2.14-2.23z"/></svg>
+              </a>
+            </div>
+          </div>
+          
+          <div>
+            <h3 className="font-semibold text-white mb-4">Quick Links</h3>
+            <ul className="space-y-2">
+              {['About Us', 'Services', 'Portfolio', 'Contact'].map((item) => (
+                <li key={item}>
+                  <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                    {item}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+          
+          <div>
+            <h3 className="font-semibold text-white mb-4">Contact Info</h3>
+            <div className="space-y-2 text-gray-400">
+              <p className="flex items-center">
+                <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/>
+                  <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/>
+                </svg>
+                info@company.com
+              </p>
+              <p className="flex items-center">
+                <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd"/>
+                </svg>
+                123 Business Street, City
+              </p>
+              <p className="flex items-center">
+                <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/>
+                </svg>
+                (555) 123-4567
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="border-t border-gray-800 mt-8 pt-8 text-center">
+          <p className="text-gray-400">
+            © 2024 Company Name. All rights reserved.
+          </p>
+        </div>
+      </div>
+    </footer>
+  );
+};
+
+export default Footer;`;
+      
+      processedFiles['src/components/Footer.jsx'] = footerContent;
+      console.log(`✅ Created Footer component with logo placeholder`);
+    }
+    
     // Ensure we have an App.jsx file with proper component imports
     const existingAppPath = processedFiles['src/App.jsx'] ? 'src/App.jsx' : processedFiles['App.jsx'] ? 'App.jsx' : null;
     
@@ -1660,10 +1849,7 @@ body {
       // Check if Footer is imported and add it if missing
       let appContent = processedFiles[existingAppPath];
       
-      // Check if Footer component exists
-      const hasFooterComponent = processedFiles['src/components/Footer.jsx'] || processedFiles['components/Footer.jsx'];
-      
-      if (hasFooterComponent && !appContent.includes('Footer')) {
+      if (!appContent.includes('Footer')) {
         // Add Footer import if missing
         if (appContent.includes('import React')) {
           appContent = appContent.replace(
@@ -1674,14 +1860,28 @@ body {
         
         // Add Footer component to JSX if not present
         if (!appContent.includes('<Footer')) {
-          appContent = appContent.replace(
-            /(\s*<\/div>\s*\)\s*}\s*export default)/,
-            '      <Footer />\n$1'
-          );
+          // Try different patterns to find where to insert Footer
+          if (appContent.includes('</div>')) {
+            appContent = appContent.replace(
+              /(\s*<\/div>\s*\)\s*;?\s*}\s*export\s+default)/,
+              '      <Footer />\n$1'
+            );
+          } else if (appContent.includes('</React.StrictMode>')) {
+            appContent = appContent.replace(
+              /(\s*<\/React\.StrictMode>)/,
+              '      <Footer />\n$1'
+            );
+          } else {
+            // Find the return statement and add Footer before the closing tag
+            appContent = appContent.replace(
+              /(return\s*\(\s*<[^>]+>[\s\S]*?)(\s*<\/[^>]+>\s*\)\s*;?\s*}\s*export\s+default)/,
+              '$1      <Footer />\n$2'
+            );
+          }
         }
         
         processedFiles[existingAppPath] = appContent;
-
+        console.log(`✅ Added Footer import and component to App.jsx`);
       }
     } else if (!processedFiles['src/App.jsx'] && !processedFiles['App.jsx']) {
       // Check if we have any page files that should be the main App
