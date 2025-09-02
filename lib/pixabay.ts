@@ -437,7 +437,7 @@ class PixabayAPI {
   }
 
   /**
-   * Process image placeholders in generated website code
+   * Process image placeholders in generated website code with UNIQUE images per component
    */
   async processImagePlaceholders(
     fileContent: string, 
@@ -455,66 +455,134 @@ class PixabayAPI {
 
     console.log(`🖼️ Processing ${placeholders.length} image placeholders for ${businessType || 'general'} business`);
     
-    // Process each unique image category
-    const uniqueCategories = [...new Set(placeholders.map(match => match[1]))];
-    const imageMap: Record<string, string> = {};
+    // Group placeholders by category and count occurrences
+    const categoryCount: Record<string, number> = {};
+    placeholders.forEach(match => {
+      const category = match[1];
+      categoryCount[category] = (categoryCount[category] || 0) + 1;
+    });
+    
+    console.log('📊 Image category breakdown:', categoryCount);
+    
+    // Fetch multiple images for each category to ensure uniqueness
+    const categoryImages: Record<string, PixabayImage[]> = {};
+    const uniqueCategories = Object.keys(categoryCount);
     
     for (const category of uniqueCategories) {
       try {
+        // Fetch MORE images than needed to ensure we have variety
+        const neededCount = categoryCount[category];
+        const fetchCount = Math.max(neededCount + 2, 8); // Get extra images for variety
+        
         const images = await this.getImageForCategory(
           category,
           businessType,
           {
             orientation: category === 'hero' ? 'horizontal' : 'all',
             imageType: category === 'logo' ? 'vector' : 'photo',
-            count: 1
+            count: fetchCount
           }
         );
         
         if (images.length > 0) {
-          // Use webformat URL for general display, or largeImageURL if available for high quality
-          const originalImageUrl = images[0].largeImageURL || images[0].webformatURL;
-          
-          // For WebContainer compatibility, use direct Pixabay URLs
-          // These work better in iframe environments than proxied localhost URLs
-          imageMap[category] = originalImageUrl;
+          categoryImages[category] = images;
+          console.log(`✅ ${category}: ${images.length} unique images fetched (need ${neededCount})`);
         } else {
-          // Use fallback image URL instead of keeping placeholder  
-          const fallbackUrl = this.getFallbackImageUrl(category);
-          imageMap[category] = fallbackUrl;
+          console.warn(`⚠️ No Pixabay images found for category: ${category}`);
+          categoryImages[category] = [];
         }
       } catch (error) {
-        // Use fallback image URL instead of keeping placeholder
-        const fallbackUrl = this.getFallbackImageUrl(category);
-        imageMap[category] = fallbackUrl;
+        console.error(`❌ Error fetching images for ${category}:`, error);
+        categoryImages[category] = [];
       }
       
-      // Add a small delay between requests to avoid rate limiting
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Add delay between requests to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 150));
     }
     
-    // Replace all placeholders with actual image URLs
-    for (const [category, imageUrl] of Object.entries(imageMap)) {
-      const placeholder = `/*IMAGE:${category}*/`;
-      processedContent = processedContent.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), imageUrl);
-    }
+    // Create unique image assignment for each placeholder occurrence
+    const categoryImageIndex: Record<string, number> = {};
+    const usedUrls = new Set<string>(); // Track used URLs globally to avoid duplicates
     
-    const replacedCount = Object.keys(imageMap).length;
-    console.log(`🎯 Images processed: ${replacedCount} categories with real Pixabay images`);
+    // Process each placeholder individually to assign unique images
+    let placeholderIndex = 0;
+    processedContent = processedContent.replace(imagePlaceholderRegex, (match, category) => {
+      placeholderIndex++;
+      
+      // Initialize index for this category
+      if (!(category in categoryImageIndex)) {
+        categoryImageIndex[category] = 0;
+      }
+      
+      const images = categoryImages[category];
+      let selectedImageUrl = '';
+      
+      if (images && images.length > 0) {
+        // Try to find an unused image from this category
+        let attempts = 0;
+        let imageIndex = categoryImageIndex[category];
+        
+        while (attempts < images.length) {
+          const currentImage = images[imageIndex % images.length];
+          const imageUrl = currentImage.largeImageURL || currentImage.webformatURL;
+          
+          if (!usedUrls.has(imageUrl)) {
+            // Found unused image
+            selectedImageUrl = imageUrl;
+            usedUrls.add(imageUrl);
+            categoryImageIndex[category] = imageIndex + 1; // Move to next image for next use
+            console.log(`🎯 ${category} #${placeholderIndex}: Assigned unique image (index ${imageIndex})`);
+            break;
+          }
+          
+          imageIndex++;
+          attempts++;
+        }
+        
+        // If we couldn't find unused image, use any available image
+        if (!selectedImageUrl && images.length > 0) {
+          const fallbackImage = images[imageIndex % images.length];
+          selectedImageUrl = fallbackImage.largeImageURL || fallbackImage.webformatURL;
+          categoryImageIndex[category] = imageIndex + 1;
+          console.log(`⚠️ ${category} #${placeholderIndex}: Using fallback image (all unique images exhausted)`);
+        }
+      }
+      
+      // Use fallback URL if no Pixabay image available
+      if (!selectedImageUrl) {
+        const fallbackUrl = this.getFallbackImageUrl(category);
+        // Proxy Unsplash images for WebContainer compatibility
+        selectedImageUrl = `http://localhost:5000/api/image-proxy?url=${encodeURIComponent(fallbackUrl)}`;
+        console.log(`🔄 ${category} #${placeholderIndex}: Using proxied Unsplash fallback`);
+      }
+      
+      return selectedImageUrl;
+    });
+    
+    const totalReplaced = placeholders.length;
+    const uniqueImages = usedUrls.size;
+    console.log(`🎯 Images processed: ${totalReplaced} placeholders replaced with ${uniqueImages} unique images`);
     
     // Final verification - check that replacements actually happened
     const finalCheck = (processedContent.match(/\/\*IMAGE:[^*]+\*\//g) || []).length;
     if (finalCheck > 0) {
-      console.warn(`⚠️ WARNING: ${finalCheck} image placeholders still remain after processing!`);
+      console.error(`❌ CRITICAL: ${finalCheck} image placeholders still remain after processing!`);
     } else {
-      console.log(`✅ SUCCESS: All image placeholders have been replaced with real URLs`);
+      console.log(`✅ SUCCESS: All ${totalReplaced} image placeholders replaced with real URLs`);
     }
     
-    // Log sample of replaced content
+    // Log sample of replaced content for verification
     const sampleUrls = processedContent.match(/src="[^"]*\.(jpg|jpeg|png|gif|webp)[^"]*"/g) || [];
     if (sampleUrls.length > 0) {
-      console.log(`📸 Sample image URLs: ${sampleUrls.slice(0, 2).join(', ')}`);
+      console.log(`📸 Sample image URLs (${sampleUrls.length} total):`);
+      sampleUrls.slice(0, 3).forEach((url, i) => {
+        console.log(`   ${i + 1}: ${url.substring(0, 70)}...`);
+      });
     }
+    
+    // Calculate and report uniqueness ratio
+    const uniqueRatio = Math.round((uniqueImages / totalReplaced) * 100);
+    console.log(`📈 Image uniqueness: ${uniqueRatio}% (${uniqueImages}/${totalReplaced} unique)`);
     
     return processedContent;
   }
