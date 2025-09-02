@@ -231,29 +231,29 @@ These placeholders will be automatically replaced with real, contextual images.
 
 ✅ REQUIRED IN EVERY COMPONENT:
 
-📌 Navbar/Header components MUST include:
-<img src="/*IMAGE:logo*/" alt="Company Logo" className="h-10 w-10 rounded-lg object-cover" />
+📌 Navbar/Header components MUST include (with responsive styling):
+<img src="/*IMAGE:logo*/" alt="Company Logo" className="h-10 w-10 md:h-12 md:w-12 rounded-xl object-cover shadow-lg backdrop-blur-sm border border-white/10" />
 
-📌 Hero sections MUST include:
-<img src="/*IMAGE:hero*/" alt="Hero Background" className="w-full h-full object-cover opacity-40" />
+📌 Hero sections MUST include (with backdrop effects):
+<img src="/*IMAGE:hero*/" alt="Hero Background" className="w-full h-full object-cover opacity-70 rounded-2xl shadow-2xl" />
 
-📌 Service/Feature cards MUST include:
-<img src="/*IMAGE:service*/" alt="Service" className="w-16 h-16 mx-auto mb-4 rounded-lg object-cover" />
+📌 Service/Feature cards MUST include (with modern styling):
+<img src="/*IMAGE:service*/" alt="Service" className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-4 rounded-2xl object-cover shadow-lg backdrop-blur-sm border border-white/20 hover:scale-105 transition-transform" />
 
-📌 About sections MUST include:
-<img src="/*IMAGE:about*/" alt="About Us" className="w-full h-64 object-cover rounded-lg" />
+📌 About sections MUST include (responsive with effects):
+<img src="/*IMAGE:about*/" alt="About Us" className="w-full h-64 md:h-80 object-cover rounded-3xl shadow-2xl backdrop-blur-lg border border-white/10" />
 
-📌 Team sections MUST include:
-<img src="/*IMAGE:team*/" alt="Team Member" className="w-24 h-24 rounded-full object-cover" />
+📌 Team sections MUST include (professional styling):
+<img src="/*IMAGE:team*/" alt="Team Member" className="w-24 h-24 md:w-32 md:h-32 rounded-full object-cover shadow-xl backdrop-blur-sm border-4 border-white/20 hover:scale-110 transition-all" />
 
-📌 Contact sections MUST include:
-<img src="/*IMAGE:office*/" alt="Office Location" className="w-full h-48 object-cover rounded-lg" />
+📌 Contact sections MUST include (elegant presentation):
+<img src="/*IMAGE:office*/" alt="Office Location" className="w-full h-48 md:h-64 object-cover rounded-2xl shadow-2xl backdrop-blur-sm border border-white/10" />
 
-📌 Feature highlights MUST include:
-<img src="/*IMAGE:feature*/" alt="Feature" className="w-16 h-16 mx-auto mb-4 rounded-lg object-cover" />
+📌 Feature highlights MUST include (interactive styling):
+<img src="/*IMAGE:feature*/" alt="Feature" className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-4 rounded-xl object-cover shadow-lg backdrop-blur-sm border border-white/20 hover:shadow-2xl transition-all" />
 
-📌 Testimonial sections MUST include:
-<img src="/*IMAGE:testimonial*/" alt="Customer" className="w-16 h-16 rounded-full object-cover" />
+📌 Testimonial sections MUST include (premium styling):
+<img src="/*IMAGE:testimonial*/" alt="Customer" className="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover shadow-xl backdrop-blur-sm border-2 border-white/30" />
 
 🚨 CRITICAL RULES:
 1. Use EXACTLY this syntax: /*IMAGE:category*/ - DO NOT change it
@@ -378,7 +378,7 @@ EXAMPLE COMPONENTS WITH MANDATORY IMAGES (MINIMUM REQUIRED):
 
 🚨 COPY THESE EXACT PATTERNS - DO NOT MODIFY THE IMAGE SYNTAX 🚨
 
-**1. NAVBAR WITH LOGO (COPY THIS EXACTLY):**
+**1. NAVBAR WITH RESPONSIVE LOGO (COPY THIS EXACTLY):**
 \`\`\`jsx
 import React from 'react';
 
@@ -425,7 +425,7 @@ const Hero = () => {
     <section className="relative min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 flex items-center justify-center overflow-hidden">
       {/* THIS LINE IS MANDATORY - COPY EXACTLY */}
       <div className="absolute inset-0">
-        <img src="/*IMAGE:hero*/" alt="Hero Background" className="w-full h-full object-cover opacity-40" />
+        <img src="/*IMAGE:hero*/" alt="Hero Background" className="w-full h-full object-cover opacity-70 rounded-2xl shadow-2xl backdrop-blur-sm" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
       </div>
       
@@ -447,17 +447,17 @@ const Hero = () => {
         {/* THESE LINES ARE MANDATORY - COPY EXACTLY */}
         <div className="grid md:grid-cols-3 gap-6 mt-12">
           <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-lg p-6">
-            <img src="/*IMAGE:feature*/" alt="Feature 1" className="w-16 h-16 mx-auto mb-4 rounded-lg object-cover" />
+            <img src="/*IMAGE:feature*/" alt="Feature 1" className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-4 rounded-2xl object-cover shadow-lg backdrop-blur-sm border border-white/20 hover:scale-105 transition-transform" />
             <h3 className="text-2xl font-bold text-white mb-2">Expert Solutions</h3>
             <p className="text-gray-200">Professional expertise you can trust</p>
           </div>
           <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-lg p-6">
-            <img src="/*IMAGE:feature*/" alt="Feature 2" className="w-16 h-16 mx-auto mb-4 rounded-lg object-cover" />
+            <img src="/*IMAGE:feature*/" alt="Feature 2" className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-4 rounded-2xl object-cover shadow-lg backdrop-blur-sm border border-white/20 hover:scale-105 transition-transform" />
             <h3 className="text-2xl font-bold text-white mb-2">Modern Technology</h3>
             <p className="text-gray-200">Cutting-edge tools and platforms</p>
           </div>
           <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-lg p-6">
-            <img src="/*IMAGE:feature*/" alt="Feature 3" className="w-16 h-16 mx-auto mb-4 rounded-lg object-cover" />
+            <img src="/*IMAGE:feature*/" alt="Feature 3" className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-4 rounded-2xl object-cover shadow-lg backdrop-blur-sm border border-white/20 hover:scale-105 transition-transform" />
             <h3 className="text-2xl font-bold text-white mb-2">24/7 Support</h3>
             <p className="text-gray-200">Round-the-clock assistance</p>
           </div>
@@ -472,13 +472,13 @@ export default Hero;
 
 🚨 CRITICAL: COPY THESE EXACT IMAGE PATTERNS 🚨
 
-MANDATORY IMAGE PATTERNS TO COPY EXACTLY:
-- Navbar: <img src="/*IMAGE:logo*/" alt="Company Logo" className="h-10 w-10 rounded-lg shadow-md object-cover" />
-- Hero: <img src="/*IMAGE:hero*/" alt="Hero Background" className="w-full h-full object-cover opacity-40" />
-- Services: <img src="/*IMAGE:service*/" alt="Service" className="w-16 h-16 mx-auto mb-4 rounded-lg object-cover" />
-- Team: <img src="/*IMAGE:team*/" alt="Team" className="w-24 h-24 rounded-full object-cover" />
-- About: <img src="/*IMAGE:about*/" alt="About" className="w-full h-64 object-cover rounded-lg" />
-- Contact: <img src="/*IMAGE:office*/" alt="Office" className="w-full h-48 object-cover rounded-lg" />
+MANDATORY RESPONSIVE IMAGE PATTERNS WITH STYLING - COPY EXACTLY:
+- Navbar: <img src="/*IMAGE:logo*/" alt="Company Logo" className="h-10 w-10 md:h-12 md:w-12 rounded-xl object-cover shadow-lg backdrop-blur-sm border border-white/10" />
+- Hero: <img src="/*IMAGE:hero*/" alt="Hero Background" className="w-full h-full object-cover opacity-70 rounded-2xl shadow-2xl backdrop-blur-sm" />
+- Services: <img src="/*IMAGE:service*/" alt="Service" className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-4 rounded-2xl object-cover shadow-lg backdrop-blur-sm border border-white/20 hover:scale-105 transition-transform" />
+- Team: <img src="/*IMAGE:team*/" alt="Team" className="w-24 h-24 md:w-32 md:h-32 rounded-full object-cover shadow-xl backdrop-blur-sm border-4 border-white/20 hover:scale-110 transition-all" />
+- About: <img src="/*IMAGE:about*/" alt="About" className="w-full h-64 md:h-80 object-cover rounded-3xl shadow-2xl backdrop-blur-lg border border-white/10" />
+- Contact: <img src="/*IMAGE:office*/" alt="Office" className="w-full h-48 md:h-64 object-cover rounded-2xl shadow-2xl backdrop-blur-sm border border-white/10" />
 
 🚨 DO NOT CHANGE THE /*IMAGE:category*/ SYNTAX - COPY EXACTLY AS SHOWN
 

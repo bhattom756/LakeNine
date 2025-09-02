@@ -2,7 +2,8 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getWebsiteComponents, resetWeaviateSchema } from '@/lib/weaviate';
 import { getSystemPrompt } from '@/lib/bolt-prompt';
-import { pixabayAPI, detectBusinessType } from '@/lib/pixabay';
+// ✅ Using Pexels API for high-quality stock photos
+import { pexelsAPI, detectBusinessType } from '@/lib/pexels';
 import OpenAI from 'openai';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -1550,6 +1551,9 @@ body {
     const processedFiles: Record<string, string> = {};
     const businessType = detectBusinessType(prompt);
     
+    // Reset Pexels image tracking for new website generation (ensures uniqueness per site)
+    pexelsAPI.resetImageTracking();
+    
     console.log(`🖼️ STEP 5: Processing ${businessType} website with image integration...`);
     
     // First, scan all files for image placeholders to debug
@@ -1622,10 +1626,10 @@ body {
           
           // Check if file contains image placeholders
           if (contentToProcess.includes('/*IMAGE:')) {
-            console.log(`🔄 Processing images in: ${fileName}`);
-            const processedContent = await pixabayAPI.processImagePlaceholders(contentToProcess, businessType);
+            console.log(`🔄 Processing images in: ${fileName} using PEXELS`);
+            const processedContent = await pexelsAPI.processImagePlaceholders(contentToProcess, businessType);
             processedFiles[fileName] = processedContent;
-            console.log(`✅ Completed image processing for: ${fileName}`);
+            console.log(`✅ Completed PEXELS image processing for: ${fileName}`);
           } else {
             // No image placeholders, keep original content
             processedFiles[fileName] = contentToProcess;
