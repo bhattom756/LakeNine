@@ -316,11 +316,43 @@ function extractFilesFromContent(content: string): Record<string, string> {
       // For package.json, ensure it's properly formatted
       if (filePath === 'package.json' && fileContent.startsWith('{')) {
         try {
+          // Clean up common JSON issues before parsing
+          let cleanedContent = fileContent
+            .replace(/,\s*}/g, '}')  // Remove trailing commas before closing braces
+            .replace(/,\s*]/g, ']')  // Remove trailing commas before closing brackets
+            .replace(/([^\\])\\n/g, '$1\\\\n')  // Fix improperly escaped newlines
+            .replace(/([^\\])\\t/g, '$1\\\\t')  // Fix improperly escaped tabs
+            .trim();
+          
           // Try to parse and reformat the package.json
-          const parsed = JSON.parse(fileContent);
+          const parsed = JSON.parse(cleanedContent);
           fileContent = JSON.stringify(parsed, null, 2);
+          console.log('✅ Successfully cleaned and parsed package.json');
         } catch (e) {
-          console.warn(`Package.json parsing failed, using as-is: ${e}`);
+          console.warn(`Package.json parsing failed: ${e}`);
+          console.warn(`Content around error: ${fileContent.substring(0, 300)}`);
+          
+          // Create a minimal valid package.json as fallback
+          const fallbackPackage = {
+            "name": "website",
+            "version": "1.0.0",
+            "type": "module",
+            "scripts": {
+              "dev": "vite --host 0.0.0.0 --port 5173",
+              "build": "vite build",
+              "preview": "vite preview"
+            },
+            "dependencies": {
+              "react": "^18.2.0",
+              "react-dom": "^18.2.0"
+            },
+            "devDependencies": {
+              "@vitejs/plugin-react": "^4.2.1",
+              "vite": "^5.2.0"
+            }
+          };
+          fileContent = JSON.stringify(fallbackPackage, null, 2);
+          console.log('🔧 Using fallback package.json due to parsing error');
         }
       }
       
@@ -1665,7 +1697,12 @@ export default defineConfig({
     // Ensure package.json has all required dependencies
     if (processedFiles['package.json']) {
       try {
-        const packageObj = JSON.parse(processedFiles['package.json']);
+        // Debug: Log the package.json content around position 262
+        const packageContent = processedFiles['package.json'];
+        console.log('📦 Package.json content length:', packageContent.length);
+        console.log('📦 Package.json content around position 262:', packageContent.substring(250, 280));
+        
+        const packageObj = JSON.parse(packageContent);
         
         // Add react-refresh if missing
         if (!packageObj.dependencies?.['react-refresh']) {
@@ -1686,6 +1723,34 @@ export default defineConfig({
         }
       } catch (error) {
         console.error('Failed to update package.json dependencies:', error);
+        console.error('Package.json content that failed to parse:', processedFiles['package.json']);
+        
+        // Try to create a basic package.json if parsing fails completely
+        const basicPackageJson = {
+          "name": "website",
+          "version": "1.0.0",
+          "type": "module",
+          "scripts": {
+            "dev": "vite --host 0.0.0.0 --port 5173",
+            "build": "vite build",
+            "preview": "vite preview"
+          },
+          "dependencies": {
+            "react": "^18.2.0",
+            "react-dom": "^18.2.0",
+            "react-refresh": "^0.14.0"
+          },
+          "devDependencies": {
+            "@vitejs/plugin-react": "^4.2.1",
+            "vite": "^5.2.0",
+            "autoprefixer": "^10.4.14",
+            "postcss": "^8.4.24",
+            "tailwindcss": "^3.4.0"
+          }
+        };
+        
+        processedFiles['package.json'] = JSON.stringify(basicPackageJson, null, 2);
+        console.log('🔧 Created fallback package.json due to parsing error');
       }
     }
     
@@ -1999,6 +2064,85 @@ export default {
     autoprefixer: {},
   },
 }`;
+    }
+    
+    // Debug: Log the final processed files
+    console.log('📋 Final processed files:', Object.keys(processedFiles));
+    console.log('📊 Total files processed:', Object.keys(processedFiles).length);
+    
+    // Ensure we have essential files - if not, create minimal fallbacks
+    if (!processedFiles['src/App.jsx'] && !processedFiles['App.jsx']) {
+      console.warn('⚠️ No App.jsx found in processed files! Creating fallback...');
+      processedFiles['src/App.jsx'] = `import React from 'react'
+import './App.css'
+
+function App() {
+  return (
+    <div className="App">
+      <header className="App-header">
+        <h1>Business Website</h1>
+        <p>Welcome to our business website</p>
+      </header>
+    </div>
+  )
+}
+
+export default App`;
+    }
+    
+    if (!processedFiles['package.json']) {
+      console.warn('⚠️ No package.json found in processed files! Creating fallback...');
+      const fallbackPackage = {
+        "name": "business-website",
+        "version": "1.0.0",
+        "type": "module",
+        "scripts": {
+          "dev": "vite --host 0.0.0.0 --port 5173",
+          "build": "vite build",
+          "preview": "vite preview"
+        },
+        "dependencies": {
+          "react": "^18.2.0",
+          "react-dom": "^18.2.0",
+          "react-refresh": "^0.14.0"
+        },
+        "devDependencies": {
+          "@vitejs/plugin-react": "^4.2.1",
+          "vite": "^5.2.0",
+          "autoprefixer": "^10.4.14",
+          "postcss": "^8.4.24",
+          "tailwindcss": "^3.4.0"
+        }
+      };
+      processedFiles['package.json'] = JSON.stringify(fallbackPackage, null, 2);
+    }
+    
+    if (!processedFiles['src/main.jsx']) {
+      processedFiles['src/main.jsx'] = `import React from 'react'
+import ReactDOM from 'react-dom/client'
+import App from './App.jsx'
+import './index.css'
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
+)`;
+    }
+    
+    if (!processedFiles['index.html']) {
+      processedFiles['index.html'] = `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Business Website</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>`;
     }
     
     // Step 7: Return the enhanced result

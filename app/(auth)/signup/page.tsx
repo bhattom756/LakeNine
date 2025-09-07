@@ -214,6 +214,9 @@ export default function SignupPage() {
           <label className="text-sm font-medium">Email</label>
           <input
             type="email"
+            name="email"
+            id="email"
+            autoComplete="email"
             placeholder="Your email address"
             className="w-full px-4 py-3 text-white bg-[#222630] rounded-lg border-2 border-solid border-[#2B3040] outline-none focus:border-[#596A95] transition-colors duration-200"
             value={email}
@@ -223,6 +226,9 @@ export default function SignupPage() {
           <label className="text-sm font-medium">Password</label>
           <input
             type="password"
+            name="password"
+            id="password"
+            autoComplete="new-password"
             placeholder="Choose a password"
             className="w-full px-4 py-3 text-white bg-[#222630] rounded-lg border-2 border-solid border-[#2B3040] outline-none focus:border-[#596A95] transition-colors duration-200"
             value={pwd}

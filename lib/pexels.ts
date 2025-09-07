@@ -131,7 +131,8 @@ class PexelsAPI {
     this.apiKey = process.env.PEXELS_API_TOKEN || '';
     if (!this.apiKey) {
       console.error('❌ PEXELS_API_TOKEN environment variable is not set');
-      throw new Error('PEXELS_API_TOKEN environment variable is required');
+      console.warn('⚠️ Pexels API will use fallback images only');
+      // Don't throw error to prevent page crashes - use fallbacks instead
     }
   }
 
@@ -149,6 +150,17 @@ class PexelsAPI {
     } = {}
   ): Promise<PexelsSearchResponse> {
     try {
+      // If no API key, return empty results (will trigger fallbacks)
+      if (!this.apiKey) {
+        console.warn('⚠️ No Pexels API key, returning empty results');
+        return {
+          total_results: 0,
+          page: 1,
+          per_page: 0,
+          photos: []
+        };
+      }
+
       const {
         orientation,
         size,
@@ -176,7 +188,14 @@ class PexelsAPI {
       });
       
       if (!response.ok) {
-        throw new Error(`Pexels API error: ${response.status} ${response.statusText}`);
+        console.error(`❌ Pexels API error: ${response.status} ${response.statusText}`);
+        // Return empty results instead of throwing (will trigger fallbacks)
+        return {
+          total_results: 0,
+          page: 1,
+          per_page: 0,
+          photos: []
+        };
       }
 
       const data: PexelsSearchResponse = await response.json();
@@ -185,7 +204,13 @@ class PexelsAPI {
       return data;
     } catch (error) {
       console.error('❌ Error searching Pexels photos:', error);
-      throw error;
+      // Return empty results instead of throwing (graceful degradation)
+      return {
+        total_results: 0,
+        page: 1,
+        per_page: 0,
+        photos: []
+      };
     }
   }
 
@@ -467,6 +492,11 @@ class PexelsAPI {
    */
   async testConnection(): Promise<boolean> {
     try {
+      if (!this.apiKey) {
+        console.warn('⚠️ No Pexels API key available for testing');
+        return false;
+      }
+      
       const response = await this.searchPhotos('business professional', { perPage: 1 });
       console.log('✅ Pexels API connection successful');
       return response.photos.length > 0;
@@ -480,8 +510,36 @@ class PexelsAPI {
 // Export the API class
 export { PexelsAPI, type PexelsPhoto, type PexelsSearchResponse };
 
-// Create and export a default instance
-export const pexelsAPI = new PexelsAPI();
+// Create and export a default instance with error handling
+let pexelsAPI: PexelsAPI;
+
+try {
+  pexelsAPI = new PexelsAPI();
+} catch (error) {
+  console.error('❌ Failed to initialize Pexels API:', error);
+  // Create a fallback instance that will use default images
+  pexelsAPI = {
+    resetImageTracking: () => {},
+    processImagePlaceholders: async (content: string, businessType?: string) => {
+      console.warn('⚠️ Using fallback image processing');
+      // Replace placeholders with fallback images
+      return content.replace(/\/\*IMAGE:([^*]+)\*\//g, (match, category) => {
+        const fallbacks = {
+          logo: 'https://images.unsplash.com/photo-1611224923853-80b023f02d71?w=200&h=200&fit=crop&crop=center',
+          hero: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=1200&h=600&fit=crop&crop=center',
+          team: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=200&h=200&fit=crop&crop=face',
+          service: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=300&h=200&fit=crop&crop=center',
+          office: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&h=400&fit=crop&crop=center',
+          default: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=400&h=300&fit=crop&crop=center'
+        };
+        return fallbacks[category as keyof typeof fallbacks] || fallbacks.default;
+      });
+    },
+    testConnection: async () => false
+  } as any;
+}
+
+export { pexelsAPI };
 
 // Helper function to detect business type from prompt (reused from previous implementation)
 export function detectBusinessType(prompt: string): string {
