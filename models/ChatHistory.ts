@@ -14,11 +14,20 @@ export interface IGeneratedFile {
   lastModified: Date;
 }
 
+export interface ITerminalState {
+  isVisible: boolean;
+  history: string[];
+  currentDirectory: string;
+  lastCommand?: string;
+  savedAt: Date;
+}
+
 export interface IProjectState {
   files: IGeneratedFile[];
   fileStructure: any; // File tree structure
   previewUrl?: string;
   projectType: 'react' | 'vue' | 'angular' | 'vanilla';
+  terminalState?: ITerminalState;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -75,6 +84,28 @@ const GeneratedFileSchema = new mongoose.Schema({
   }
 });
 
+const TerminalStateSchema = new mongoose.Schema({
+  isVisible: {
+    type: Boolean,
+    default: false
+  },
+  history: [{
+    type: String
+  }],
+  currentDirectory: {
+    type: String,
+    default: '~'
+  },
+  lastCommand: {
+    type: String,
+    required: false
+  },
+  savedAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
 const ProjectStateSchema = new mongoose.Schema({
   files: [GeneratedFileSchema],
   fileStructure: {
@@ -89,6 +120,10 @@ const ProjectStateSchema = new mongoose.Schema({
     type: String,
     enum: ['react', 'vue', 'angular', 'vanilla'],
     default: 'react'
+  },
+  terminalState: {
+    type: TerminalStateSchema,
+    required: false
   },
   createdAt: {
     type: Date,

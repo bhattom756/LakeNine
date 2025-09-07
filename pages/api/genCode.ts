@@ -1694,6 +1694,77 @@ export default defineConfig({
       console.log('✅ Added missing vite.config.js');
     }
     
+    // Analyze all files for third-party library usage and ensure they're in package.json
+    const detectAndAddLibraries = (files: Record<string, string>) => {
+      const allContent = Object.values(files).join('\n');
+      const detectedLibraries: Record<string, string> = {};
+      
+      // Common library patterns and their package names
+      const libraryPatterns = [
+        // UI Libraries
+        { pattern: /from ['"]@mui\//, packages: { '@mui/material': '^5.15.0', '@emotion/react': '^11.11.0', '@emotion/styled': '^11.11.0' } },
+        { pattern: /from ['"]antd['"]/, packages: { 'antd': '^5.12.0' } },
+        { pattern: /from ['"]react-bootstrap['"]/, packages: { 'react-bootstrap': '^2.9.0', 'bootstrap': '^5.3.0' } },
+        { pattern: /from ['"]@chakra-ui\//, packages: { '@chakra-ui/react': '^2.8.0', '@emotion/react': '^11.11.0', '@emotion/styled': '^11.11.0' } },
+        
+        // Routing
+        { pattern: /from ['"]react-router/, packages: { 'react-router-dom': '^6.20.0' } },
+        { pattern: /from ['"]@reach\/router['"]/, packages: { '@reach/router': '^1.3.4' } },
+        
+        // State Management
+        { pattern: /from ['"]redux['"]/, packages: { 'redux': '^4.2.1', '@reduxjs/toolkit': '^1.9.7' } },
+        { pattern: /from ['"]@reduxjs\/toolkit['"]/, packages: { '@reduxjs/toolkit': '^1.9.7', 'react-redux': '^8.1.3' } },
+        { pattern: /from ['"]zustand['"]/, packages: { 'zustand': '^4.4.7' } },
+        { pattern: /from ['"]recoil['"]/, packages: { 'recoil': '^0.7.7' } },
+        
+        // Animation
+        { pattern: /from ['"]framer-motion['"]/, packages: { 'framer-motion': '^10.16.0' } },
+        { pattern: /from ['"]react-spring['"]/, packages: { 'react-spring': '^9.7.0' } },
+        { pattern: /from ['"]lottie-react['"]/, packages: { 'lottie-react': '^2.4.0' } },
+        
+        // Forms
+        { pattern: /from ['"]react-hook-form['"]/, packages: { 'react-hook-form': '^7.48.0' } },
+        { pattern: /from ['"]formik['"]/, packages: { 'formik': '^2.4.5', 'yup': '^1.4.0' } },
+        
+        // HTTP Clients
+        { pattern: /from ['"]axios['"]/, packages: { 'axios': '^1.6.0' } },
+        { pattern: /fetch\(|\.fetch\(/, packages: {} }, // Native fetch, no package needed
+        
+        // Date/Time
+        { pattern: /from ['"]moment['"]/, packages: { 'moment': '^2.29.4' } },
+        { pattern: /from ['"]dayjs['"]/, packages: { 'dayjs': '^1.11.10' } },
+        { pattern: /from ['"]date-fns['"]/, packages: { 'date-fns': '^2.30.0' } },
+        
+        // Icons
+        { pattern: /from ['"]react-icons/, packages: { 'react-icons': '^4.12.0' } },
+        { pattern: /from ['"]@heroicons\/react['"]/, packages: { '@heroicons/react': '^2.0.18' } },
+        { pattern: /from ['"]lucide-react['"]/, packages: { 'lucide-react': '^0.294.0' } },
+        
+        // Charts
+        { pattern: /from ['"]recharts['"]/, packages: { 'recharts': '^2.8.0' } },
+        { pattern: /from ['"]chart\.js['"]/, packages: { 'chart.js': '^4.4.0', 'react-chartjs-2': '^5.2.0' } },
+        
+        // Utilities
+        { pattern: /from ['"]lodash['"]/, packages: { 'lodash': '^4.17.21', '@types/lodash': '^4.14.202' } },
+        { pattern: /from ['"]classnames['"]/, packages: { 'classnames': '^2.3.2' } },
+        { pattern: /from ['"]clsx['"]/, packages: { 'clsx': '^2.0.0' } },
+        
+        // Styling
+        { pattern: /from ['"]styled-components['"]/, packages: { 'styled-components': '^6.1.0', '@types/styled-components': '^5.1.32' } },
+        { pattern: /@apply|@tailwind/, packages: { 'tailwindcss': '^3.4.0', 'autoprefixer': '^10.4.16', 'postcss': '^8.4.32' } },
+      ];
+      
+      // Check each pattern
+      for (const { pattern, packages } of libraryPatterns) {
+        if (pattern.test(allContent)) {
+          Object.assign(detectedLibraries, packages);
+          console.log(`📦 Detected library usage: ${Object.keys(packages).join(', ')}`);
+        }
+      }
+      
+      return detectedLibraries;
+    };
+
     // Ensure package.json has all required dependencies
     if (processedFiles['package.json']) {
       try {
@@ -1704,23 +1775,33 @@ export default defineConfig({
         
         const packageObj = JSON.parse(packageContent);
         
-        // Add react-refresh if missing
-        if (!packageObj.dependencies?.['react-refresh']) {
-          packageObj.dependencies = packageObj.dependencies || {};
-          packageObj.dependencies['react-refresh'] = '^0.14.0';
-          
-          // Also ensure other essential dependencies are present
-          packageObj.dependencies['react'] = packageObj.dependencies['react'] || '^18.2.0';
-          packageObj.dependencies['react-dom'] = packageObj.dependencies['react-dom'] || '^18.2.0';
-          
-          // Ensure devDependencies
-          packageObj.devDependencies = packageObj.devDependencies || {};
-          packageObj.devDependencies['@vitejs/plugin-react'] = packageObj.devDependencies['@vitejs/plugin-react'] || '^4.2.1';
-          packageObj.devDependencies['vite'] = packageObj.devDependencies['vite'] || '^5.2.0';
-          
-          processedFiles['package.json'] = JSON.stringify(packageObj, null, 2);
-          console.log('✅ Added missing react-refresh dependency to package.json');
-        }
+        // Detect and add third-party libraries
+        const detectedLibraries = detectAndAddLibraries(processedFiles);
+        
+        // Ensure dependencies object exists
+        packageObj.dependencies = packageObj.dependencies || {};
+        packageObj.devDependencies = packageObj.devDependencies || {};
+        
+        // Add detected libraries
+        Object.entries(detectedLibraries).forEach(([lib, version]) => {
+          if (lib.includes('@types/') || lib.includes('eslint') || lib.includes('vite') || lib.includes('postcss') || lib.includes('autoprefixer') || lib.includes('tailwindcss')) {
+            packageObj.devDependencies[lib] = packageObj.devDependencies[lib] || version;
+          } else {
+            packageObj.dependencies[lib] = packageObj.dependencies[lib] || version;
+          }
+        });
+        
+        // Add essential React dependencies if missing
+        packageObj.dependencies['react'] = packageObj.dependencies['react'] || '^18.2.0';
+        packageObj.dependencies['react-dom'] = packageObj.dependencies['react-dom'] || '^18.2.0';
+        packageObj.dependencies['react-refresh'] = packageObj.dependencies['react-refresh'] || '^0.14.0';
+        
+        // Ensure essential devDependencies
+        packageObj.devDependencies['@vitejs/plugin-react'] = packageObj.devDependencies['@vitejs/plugin-react'] || '^4.2.1';
+        packageObj.devDependencies['vite'] = packageObj.devDependencies['vite'] || '^5.2.0';
+        
+        processedFiles['package.json'] = JSON.stringify(packageObj, null, 2);
+        console.log('✅ Updated package.json with detected libraries and essential dependencies');
       } catch (error) {
         console.error('Failed to update package.json dependencies:', error);
         console.error('Package.json content that failed to parse:', processedFiles['package.json']);

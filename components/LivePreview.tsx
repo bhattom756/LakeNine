@@ -9,17 +9,32 @@ import { FaArrowRightToBracket, FaDownload } from "react-icons/fa6";
 import { toast } from 'react-hot-toast';
 import JSZip from 'jszip';
 
+interface TerminalState {
+  isVisible: boolean;
+  history: string[];
+  currentDirectory: string;
+  lastCommand?: string;
+  savedAt: Date;
+}
+
 interface LivePreviewProps {
   generatedCode: string;
   projectFiles?: Record<string, string>;
+  terminalState?: TerminalState;
+  onTerminalStateChange?: (state: TerminalState) => void;
 }
 
-export default function LivePreview({ generatedCode, projectFiles = {} }: LivePreviewProps) {
+export default function LivePreview({ 
+  generatedCode, 
+  projectFiles = {}, 
+  terminalState,
+  onTerminalStateChange 
+}: LivePreviewProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [webcontainerReady, setWebcontainerReady] = useState(false);
-  const [showTerminal, setShowTerminal] = useState(true);
+  const [showTerminal, setShowTerminal] = useState(terminalState?.isVisible ?? false);
   const terminalRef = useRef<HTMLDivElement>(null);
   const terminalInstanceRef = useRef<any>(null);
   const fitAddonRef = useRef<any>(null);
@@ -28,8 +43,33 @@ export default function LivePreview({ generatedCode, projectFiles = {} }: LivePr
   const [serverStarted, setServerStarted] = useState(false);
   const shellProcessRef = useRef<any>(null);
   const inputWriterRef = useRef<any>(null);
+  const [terminalHistory, setTerminalHistory] = useState<string[]>(terminalState?.history || []);
+  const [currentDirectory, setCurrentDirectory] = useState(terminalState?.currentDirectory || '~');
 
-  // Initialize terminal
+  // Save terminal state when it changes
+  const saveTerminalState = () => {
+    if (onTerminalStateChange) {
+      const newState: TerminalState = {
+        isVisible: showTerminal,
+        history: terminalHistory,
+        currentDirectory,
+        savedAt: new Date()
+      };
+      onTerminalStateChange(newState);
+    }
+  };
+
+  // Save state when terminal visibility or other state changes
+  useEffect(() => {
+    saveTerminalState();
+  }, [showTerminal, terminalHistory, currentDirectory]);
+
+  // Toggle terminal visibility
+  const toggleTerminal = () => {
+    setShowTerminal(prev => !prev);
+  };
+
+  // Initialize terminal only once
   useEffect(() => {
     if (typeof window === 'undefined' || !showTerminal || terminalInstanceRef.current) return;
 
@@ -77,11 +117,18 @@ export default function LivePreview({ generatedCode, projectFiles = {} }: LivePr
           fitAddonRef.current = fitAddon;
           setTerminalReady(true);
 
-          // Welcome message
-          terminal.write('\x1b[1;34m┌─ LakeNine Studio Terminal ─┐\x1b[0m\r\n');
-          terminal.write('\x1b[1;32m│  Development Environment   │\x1b[0m\r\n');
-          terminal.write('\x1b[1;34m└─────────────────────────────┘\x1b[0m\r\n\r\n');
-          terminal.write('\x1b[36m~/lakenine-studio\x1b[0m $ ');
+          // Welcome message or restore history
+          if (terminalHistory.length === 0) {
+            terminal.write('\x1b[1;34m┌─ LakeNine Studio Terminal ─┐\x1b[0m\r\n');
+            terminal.write('\x1b[1;32m│  Development Environment   │\x1b[0m\r\n');
+            terminal.write('\x1b[1;34m└─────────────────────────────┘\x1b[0m\r\n\r\n');
+          } else {
+            // Restore previous terminal history
+            terminalHistory.forEach(line => {
+              terminal.write(line + '\r\n');
+            });
+          }
+          terminal.write(`\x1b[36m${currentDirectory}\x1b[0m $ `);
 
           // Fit terminal to container
           setTimeout(() => fitAddon.fit(), 100);
@@ -164,6 +211,15 @@ export default function LivePreview({ generatedCode, projectFiles = {} }: LivePr
           inputWriterRef.current.write(data).catch((error: any) => {
             console.error('Input write error:', error);
           });
+        }
+        
+        // Track command history
+        if (data === '\r') {
+          // Command executed, add to history
+          const terminalContent = terminal.buffer.active.getLine(terminal.buffer.active.cursorY)?.translateToString();
+          if (terminalContent) {
+            setTerminalHistory(prev => [...prev, terminalContent.trim()]);
+          }
         }
       });
 
@@ -392,7 +448,7 @@ export default function LivePreview({ generatedCode, projectFiles = {} }: LivePr
           <Button 
             variant="outline" 
             className="flex items-center gap-1 h-9 px-3 text-sm bg-[#23272e] text-white border-[#36454f] hover:bg-[#2a2a2a] ml-auto"
-            onClick={() => setShowTerminal(!showTerminal)}
+            onClick={toggleTerminal}
           >
             <FaArrowRightToBracket size={16} />
             {showTerminal ? 'Hide Terminal' : 'Show Terminal'}

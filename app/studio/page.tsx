@@ -40,6 +40,18 @@ export default function StudioPage() {
   const [fileViewerOpen, setFileViewerOpen] = useState(false);
   const [selectedFileName, setSelectedFileName] = useState('');
   const [selectedFileContent, setSelectedFileContent] = useState('');
+  const [terminalState, setTerminalState] = useState<{
+    isVisible: boolean;
+    history: string[];
+    currentDirectory: string;
+    lastCommand?: string;
+    savedAt: Date;
+  }>({
+    isVisible: false,
+    history: [],
+    currentDirectory: '~',
+    savedAt: new Date()
+  });
 
   // Initialize WebContainer on mount if user is logged in
   useEffect(() => {
@@ -221,7 +233,12 @@ export default function StudioPage() {
         {/* Center Panel - Live Preview */}
         <div style={{ width: `${100 - leftWidth - rightWidth}%` }}>
           {user && webContainerInitialized ? (
-            <LivePreview generatedCode={generatedCode} projectFiles={projectFiles} />
+            <LivePreview 
+              generatedCode={generatedCode} 
+              projectFiles={projectFiles}
+              terminalState={terminalState}
+              onTerminalStateChange={setTerminalState}
+            />
           ) : (
             <div className="w-full h-full bg-white flex items-center justify-center">
               <div className="text-center">
