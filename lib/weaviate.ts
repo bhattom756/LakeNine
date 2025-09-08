@@ -515,20 +515,80 @@ export async function retrieveComponentsByType(query: string, component_types: s
   }
 }
 
+// Function to intelligently determine component types based on user prompt
+function determineComponentTypesFromPrompt(prompt: string): string[] {
+  const lowerPrompt = prompt.toLowerCase();
+  const componentTypes: string[] = [];
+  
+  // Dashboard/Productivity app keywords
+  if (lowerPrompt.includes('dashboard') || lowerPrompt.includes('productivity') || 
+      lowerPrompt.includes('task') || lowerPrompt.includes('todo') || 
+      lowerPrompt.includes('notes') || lowerPrompt.includes('calendar') ||
+      lowerPrompt.includes('sidebar') || lowerPrompt.includes('admin panel')) {
+    componentTypes.push('Dashboard', 'Card', 'Sidebar', 'TaskCard', 'SearchBar');
+  }
+  
+  // E-commerce keywords
+  if (lowerPrompt.includes('ecommerce') || lowerPrompt.includes('e-commerce') || 
+      lowerPrompt.includes('shop') || lowerPrompt.includes('store') || 
+      lowerPrompt.includes('product') || lowerPrompt.includes('cart')) {
+    componentTypes.push('ProductCard', 'Cart', 'Checkout', 'Pricing', 'Feature');
+  }
+  
+  // Business/Corporate website keywords
+  if (lowerPrompt.includes('business') || lowerPrompt.includes('corporate') || 
+      lowerPrompt.includes('company') || lowerPrompt.includes('about') || 
+      lowerPrompt.includes('service') || lowerPrompt.includes('contact')) {
+    componentTypes.push('Navbar', 'Hero', 'About', 'Services', 'Testimonial', 'Footer', 'Contact');
+  }
+  
+  // Landing page keywords
+  if (lowerPrompt.includes('landing') || lowerPrompt.includes('marketing') || 
+      lowerPrompt.includes('pricing') || lowerPrompt.includes('cta') || 
+      lowerPrompt.includes('signup') || lowerPrompt.includes('sign up')) {
+    componentTypes.push('Hero', 'Pricing', 'CTA', 'Testimonial', 'Feature', 'Footer');
+  }
+  
+  // Portfolio keywords
+  if (lowerPrompt.includes('portfolio') || lowerPrompt.includes('showcase') || 
+      lowerPrompt.includes('gallery') || lowerPrompt.includes('work')) {
+    componentTypes.push('Gallery', 'Portfolio', 'Card', 'Hero', 'About');
+  }
+  
+  // Blog keywords
+  if (lowerPrompt.includes('blog') || lowerPrompt.includes('article') || 
+      lowerPrompt.includes('post') || lowerPrompt.includes('news')) {
+    componentTypes.push('BlogCard', 'Article', 'Card', 'Navbar', 'Footer');
+  }
+  
+  // If no specific type detected, use default business components
+  if (componentTypes.length === 0) {
+    componentTypes.push('Navbar', 'Hero', 'Card', 'Feature', 'Footer');
+  }
+  
+  // Always include Card as it's versatile
+  if (!componentTypes.includes('Card')) {
+    componentTypes.push('Card');
+  }
+  
+  console.log(`🎯 Detected component types for prompt: ${componentTypes.join(', ')}`);
+  return componentTypes;
+}
+
 // Enhanced component retrieval with better vectorization
 export async function getWebsiteComponents(
   query: string,
-  component_types: string[] = [
-    // Updated to match the new 10 component categories
-    'Navbar', 'Hero', 'Footer', 'Pricing', 'Testimonial', 
-    'CTA', 'Form', 'Feature', 'Dashboard', 'Card'
-  ]
+  component_types?: string[]
 ): Promise<any[]> {
   try {
     console.log('🔍 Starting Weaviate component retrieval...');
     
+    // Determine component types based on the prompt if not provided
+    const typesToSearch = component_types || determineComponentTypesFromPrompt(query);
+    console.log(`🎯 Searching for component types: ${typesToSearch.join(', ')}`);
+    
     // Try to retrieve specific component types first
-    const typeResults = await retrieveComponentsByType(query, component_types, 2);
+    const typeResults = await retrieveComponentsByType(query, typesToSearch, 2);
     let allComponents: any[] = [];
     
     // Collect components from all types
@@ -542,9 +602,9 @@ export async function getWebsiteComponents(
     }
     
     // If we don't have enough components, do a general search
-    if (allComponents.length < 5) {
+    if (allComponents.length < 3) {
       console.log('🔍 Performing general component search...');
-      const generalResults = await retrieveComponents(query, 5);
+      const generalResults = await retrieveComponents(query, 8);
       
       // Add general results, avoiding duplicates (using new field names)
       const existingIds = new Set(allComponents.map(c => `${c.category}-${c.name}`));
@@ -552,6 +612,20 @@ export async function getWebsiteComponents(
         const id = `${component.category}-${component.name}`;
         if (!existingIds.has(id)) {
           allComponents.push(component);
+        }
+      }
+    }
+    
+    // If still no components, try searching for basic components
+    if (allComponents.length === 0) {
+      console.log('🔍 No components found, searching for basic components...');
+      const basicTypes = ['Card', 'Dashboard', 'Navbar', 'Hero'];
+      const basicResults = await retrieveComponentsByType(query, basicTypes, 2);
+      
+      for (const [type, components] of Object.entries(basicResults)) {
+        if (components && Array.isArray(components)) {
+          allComponents.push(...components);
+          console.log(`✅ Retrieved ${components.length} basic ${type} components`);
         }
       }
     }

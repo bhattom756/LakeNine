@@ -32,7 +32,41 @@ function enhanceBasicPrompt(prompt: string): string {
   let businessType = '';
   let specificRequirements = '';
   
-  if (lowerPrompt.includes('hospital') || lowerPrompt.includes('medical') || lowerPrompt.includes('healthcare') || lowerPrompt.includes('clinic')) {
+  if (lowerPrompt.includes('dashboard') || lowerPrompt.includes('productivity') || 
+      lowerPrompt.includes('task') || lowerPrompt.includes('todo') || 
+      lowerPrompt.includes('notes') || lowerPrompt.includes('calendar') ||
+      lowerPrompt.includes('sidebar') || lowerPrompt.includes('admin panel')) {
+    businessType = 'Dashboard/Productivity App';
+    specificRequirements = `
+MANDATORY SECTIONS for Dashboard/Productivity App:
+✅ Left Sidebar Navigation with icons (Home, Tasks, Notes, Calendar, Settings)
+✅ Top Search Bar with search functionality and user profile
+✅ Main Dashboard Panel with today's tasks in card layout
+✅ Task Management Section with add/edit/delete functionality
+✅ Notes Section with rich text editing capabilities
+✅ Calendar View with task integration
+✅ Responsive mobile navigation with hamburger menu
+✅ Dark mode toggle functionality
+✅ Real-time updates and smooth animations
+
+VISUAL REQUIREMENTS:
+- Dark mode color scheme with proper contrast ratios
+- Card-based layout with subtle shadows and hover effects
+- Smooth transitions and micro-animations
+- Mobile-responsive design with collapsible sidebar
+- Modern UI components with consistent spacing
+- Interactive elements with proper feedback
+- Clean typography and iconography
+
+FUNCTIONAL REQUIREMENTS:
+- Task CRUD operations (Create, Read, Update, Delete)
+- Search functionality across tasks and notes
+- Calendar integration with task scheduling
+- Notes with rich text formatting
+- Responsive sidebar that collapses on mobile
+- Dark/light mode toggle
+- Smooth animations for all interactions`;
+  } else if (lowerPrompt.includes('hospital') || lowerPrompt.includes('medical') || lowerPrompt.includes('healthcare') || lowerPrompt.includes('clinic')) {
     businessType = 'Hospital/Medical';
     specificRequirements = `
 MANDATORY SECTIONS for Hospital Website:
@@ -946,7 +980,12 @@ function convertNextJSPackageToVite(packageJsonContent: string): string {
 function detectWebsiteType(query: string): string {
   const lowerQuery = query.toLowerCase();
   
-  if (lowerQuery.includes('college') || lowerQuery.includes('university') || lowerQuery.includes('education')) {
+  if (lowerQuery.includes('dashboard') || lowerQuery.includes('productivity') || 
+      lowerQuery.includes('task') || lowerQuery.includes('todo') || 
+      lowerQuery.includes('notes') || lowerQuery.includes('calendar') ||
+      lowerQuery.includes('sidebar') || lowerQuery.includes('admin panel')) {
+    return 'Dashboard/Productivity App';
+  } else if (lowerQuery.includes('college') || lowerQuery.includes('university') || lowerQuery.includes('education')) {
     return 'Educational Institution';
   } else if (lowerQuery.includes('gym') || lowerQuery.includes('fitness') || lowerQuery.includes('workout')) {
     return 'Fitness/Gym';
@@ -1042,22 +1081,43 @@ function buildRAGContextFromArray(components: any[], websiteType: string, isDark
   }
   
   context += `## 🚨 CRITICAL DESIGN REQUIREMENTS:\n`;
-  context += `- CREATE A COMPLETE WEBSITE with ALL sections: Navigation, Hero, Features, Services, About, Testimonials, Contact, Footer\n`;
+  
+  // Customize requirements based on website type
+  if (websiteType === 'Dashboard/Productivity App') {
+    context += `- CREATE A COMPLETE DASHBOARD APP with ALL sections: Sidebar Navigation, Top Search Bar, Main Dashboard, Task Cards, Notes Section, Calendar View\n`;
+    context += `- Focus on DARK MODE design with proper contrast and modern UI patterns\n`;
+    context += `- Include INTERACTIVE ELEMENTS: task management, search functionality, responsive sidebar\n`;
+    context += `- Generate AT LEAST 6-8 React components for a functional dashboard\n`;
+  } else {
+    context += `- CREATE A COMPLETE WEBSITE with ALL sections: Navigation, Hero, Features, Services, About, Testimonials, Contact, Footer\n`;
+    context += `- Generate AT LEAST 8-10 React components for a full website\n`;
+  }
+  
   context += `- Use the EXACT Tailwind classes provided above - DO NOT use basic styling\n`;
   context += `- Apply MODERN, ATTRACTIVE design patterns like professional websites\n`;
   context += `- Include GRADIENTS, SHADOWS, HOVER EFFECTS, and ANIMATIONS\n`;
-  context += `- Generate AT LEAST 8-10 React components for a full website\n`;
   
   context += `## 📷 MANDATORY IMAGE REQUIREMENTS:\n`;
-  context += `- EVERY component MUST include contextual images using /*IMAGE:category*/ placeholders\n`;
-  context += `- NAVBAR: Must include company logo using /*IMAGE:logo*/\n`;
-  context += `- HERO: Use /*IMAGE:hero*/ for background or main image\n`;
-  context += `- SERVICES: Use /*IMAGE:service*/ for service illustrations\n`;
-  context += `- TEAM: Use /*IMAGE:team*/ for team member photos\n`;
-  context += `- ABOUT: Use /*IMAGE:about*/ for company images\n`;
-  context += `- FEATURES: Use /*IMAGE:feature*/ for feature highlights\n`;
-  context += `- TESTIMONIALS: Use /*IMAGE:testimonial*/ for customer photos\n`;
-  context += `- CONTACT: Use /*IMAGE:office*/ for office/location images\n`;
+  
+  if (websiteType === 'Dashboard/Productivity App') {
+    context += `- EVERY component MUST include contextual images using /*IMAGE:category*/ placeholders\n`;
+    context += `- SIDEBAR: Use /*IMAGE:logo*/ for app logo\n`;
+    context += `- DASHBOARD: Use /*IMAGE:dashboard*/ for background or main image\n`;
+    context += `- TASKS: Use /*IMAGE:task*/ for task illustrations\n`;
+    context += `- NOTES: Use /*IMAGE:notes*/ for notes interface\n`;
+    context += `- CALENDAR: Use /*IMAGE:calendar*/ for calendar interface\n`;
+    context += `- PROFILE: Use /*IMAGE:profile*/ for user profile images\n`;
+  } else {
+    context += `- EVERY component MUST include contextual images using /*IMAGE:category*/ placeholders\n`;
+    context += `- NAVBAR: Must include company logo using /*IMAGE:logo*/\n`;
+    context += `- HERO: Use /*IMAGE:hero*/ for background or main image\n`;
+    context += `- SERVICES: Use /*IMAGE:service*/ for service illustrations\n`;
+    context += `- TEAM: Use /*IMAGE:team*/ for team member photos\n`;
+    context += `- ABOUT: Use /*IMAGE:about*/ for company images\n`;
+    context += `- FEATURES: Use /*IMAGE:feature*/ for feature highlights\n`;
+    context += `- TESTIMONIALS: Use /*IMAGE:testimonial*/ for customer photos\n`;
+    context += `- CONTACT: Use /*IMAGE:office*/ for office/location images\n`;
+  }
   
   context += `## 🎨 STYLING REQUIREMENTS:\n`;
   context += `- Apply the provided Tailwind classes for attractive styling: ${getAllUniqueClasses(components)}\n`;

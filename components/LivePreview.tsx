@@ -31,7 +31,7 @@ export default function LivePreview({
   onTerminalStateChange 
 }: LivePreviewProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [webcontainerReady, setWebcontainerReady] = useState(false);
   const [showTerminal, setShowTerminal] = useState(terminalState?.isVisible ?? false);
@@ -274,7 +274,50 @@ export default function LivePreview({
         }
       }, 2000);
     }
-  }, [serverStarted]);
+  }, []); // Run on mount only
+
+  // Poll for WebContainer availability if not ready on mount
+  useEffect(() => {
+    if (!webcontainerReady) {
+      const checkWebContainer = () => {
+        const webcontainer = getWebContainer();
+        if (webcontainer) {
+          setWebcontainerReady(true);
+          
+          // Set up server ready listener
+          webcontainer.on('server-ready', (port: number, url: string) => {
+            setCurrentUrl(url);
+            setServerStarted(true);
+            setLoading(false);
+            
+            if (terminalInstanceRef.current) {
+              terminalInstanceRef.current.write(`\r\n\x1b[32m✓ Server ready at ${url}\x1b[0m\r\n`);
+              terminalInstanceRef.current.write('\x1b[36m~/lakenine-studio\x1b[0m $ ');
+            }
+          });
+
+          // If server is already running, check for URL
+          setTimeout(() => {
+            if (!serverStarted) {
+              // Try to get the server URL (usually localhost:5173 for Vite)
+              const defaultUrl = 'http://localhost:5173';
+              setCurrentUrl(defaultUrl);
+              setServerStarted(true);
+              setLoading(false);
+            }
+          }, 2000);
+        } else {
+          // Check again in 500ms if WebContainer is not ready
+          setTimeout(checkWebContainer, 500);
+        }
+      };
+      
+      // Start checking after a short delay
+      const timeoutId = setTimeout(checkWebContainer, 100);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [webcontainerReady, serverStarted]);
 
   // Update project files when they change
   useEffect(() => {
