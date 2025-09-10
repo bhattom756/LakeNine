@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, CSSProperties } from "react";
 import { registerWithEmail, signUpWithGoogle, handleRedirectResult, verifyAuthConfig } from "@/lib/firebase";
+import { getAuthErrorMessage } from "@/lib/auth-errors";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import google from "@/public/google.png";
@@ -60,15 +61,8 @@ export default function SignupPage() {
         }
       } catch (err: any) {
         console.error("Redirect error in signup page:", err);
-        let errorMessage = "Google sign-up failed. Please try again.";
-        
-        if (err.code === "auth/account-exists-with-different-credential") {
-          errorMessage = "An account already exists with a different sign-in method.";
-        } else if (err.code === "auth/network-request-failed") {
-          errorMessage = "Network error. Please check your internet connection.";
-        }
-        
-        toast.error(errorMessage);
+        const authError = getAuthErrorMessage(err);
+        toast.error(authError.userMessage);
         setIsGoogleLoading(false);
       }
     };
@@ -123,14 +117,13 @@ export default function SignupPage() {
       toast.success("Account created successfully!");
       router.push("/"); // Redirect to home after signup
     } catch (err: any) {
-      let errorMessage = "Failed to create account. Please try again.";
-
+      const authError = getAuthErrorMessage(err);
+      
       if (err.code === "auth/email-already-in-use") {
-        errorMessage = "This email is already registered.";
         toast.error(
           (t) => (
             <div className="flex flex-col gap-2">
-              <span>This email is already registered.</span>
+              <span>{authError.userMessage}</span>
               <button
                 onClick={() => {
                   router.push("/login");
@@ -146,17 +139,9 @@ export default function SignupPage() {
         );
         setIsLoading(false);
         return;
-      } else if (err.code === "auth/invalid-email") {
-        errorMessage = "Please enter a valid email address.";
-      } else if (err.code === "auth/operation-not-allowed") {
-        errorMessage = "Email/password accounts are not enabled. Please contact support.";
-      } else if (err.code === "auth/weak-password") {
-        errorMessage = "Please choose a stronger password.";
-      } else if (err.code === "auth/network-request-failed") {
-        errorMessage = "Network error. Please check your internet connection.";
       }
 
-      toast.error(errorMessage);
+      toast.error(authError.userMessage);
     } finally {
       setIsLoading(false);
     }
@@ -165,31 +150,13 @@ export default function SignupPage() {
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
     try {
-      // Use Google popup authentication
-      const result = await signUpWithGoogle();
-      if (result?.user) {
-        if (result.isNewUser) {
-          toast.success("Account created with Google successfully!");
-        } else {
-          toast.success("Signed in with existing Google account!");
-        }
-        router.push("/");
-      }
+      // Use Google redirect authentication
+      await signUpWithGoogle();
+      // Page will redirect to Google, then back to our app
+      // The redirect result will be handled by the useEffect above
     } catch (err: any) {
-      let errorMessage = "Google sign-up failed. Please try again.";
-      
-      if (err.code === "auth/popup-closed-by-user") {
-        errorMessage = "Sign-up was cancelled. Please try again.";
-      } else if (err.code === "auth/popup-blocked") {
-        errorMessage = "Pop-up was blocked. Please allow pop-ups for this site.";
-      } else if (err.code === "auth/cancelled-popup-request") {
-        errorMessage = "Sign-up was cancelled. Please try again.";
-      } else if (err.code === "auth/network-request-failed") {
-        errorMessage = "Network error. Please check your internet connection.";
-      }
-      
-      toast.error(errorMessage);
-    } finally {
+      const authError = getAuthErrorMessage(err);
+      toast.error(authError.userMessage);
       setIsGoogleLoading(false);
     }
   };

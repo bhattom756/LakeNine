@@ -20,16 +20,21 @@ import {
 } from "firebase/auth";
 import { getAnalytics, isSupported } from "firebase/analytics";
 
-// Firebase config from your dashboard
+// Firebase config from environment variables
 const firebaseConfig = {
-  apiKey: "AIzaSyCwVJoP6EDM3QvEpcHwcxVaPWV9Mki3ppQ",
-  authDomain: "lakenine-57b55.firebaseapp.com",
-  projectId: "lakenine-57b55",
-  storageBucket: "lakenine-57b55.appspot.com",
-  messagingSenderId: "472067900901",
-  appId: "1:472067900901:web:cdc0e243eedd3d0125db0c",
-  measurementId: "G-54T0SRC7J0",
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyCwVJoP6EDM3QvEpcHwcxVaPWV9Mki3ppQ",
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "lakenine-57b55.firebaseapp.com",
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "lakenine-57b55",
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "lakenine-57b55.appspot.com",
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "472067900901",
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:472067900901:web:cdc0e243eedd3d0125db0c",
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || "G-54T0SRC7J0",
 };
+
+// Validate Firebase config
+if (!firebaseConfig.apiKey || !firebaseConfig.authDomain || !firebaseConfig.projectId) {
+  throw new Error("Firebase configuration is missing required fields");
+}
 
 // Initialize Firebase only once (for hot reload/dev)
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
@@ -42,138 +47,47 @@ if (typeof window !== 'undefined') {
   
   // Set proper persistence - use local persistence but with browser session tracking
   setPersistence(auth, browserLocalPersistence)
-    .catch((error) => {
+    .catch((error: any) => {
       console.error("Error setting auth persistence:", error);
     });
 }
 
 // Initialize analytics (only in browser)
-isSupported().then((yes) => {
+isSupported().then((yes: boolean) => {
   if (yes && typeof window !== "undefined") {
     getAnalytics(app);
   }
 });
 
-// Browser session tracking for logout on browser close
-const SESSION_KEY = 'firebase_browser_session';
+// Simplified session management
 const AUTH_ACTIVE_KEY = 'firebase_auth_active';
-const SESSION_TIMESTAMP_KEY = 'firebase_session_timestamp';
-
-// Check if this is a new browser session
-const isNewBrowserSession = () => {
-  if (typeof window === 'undefined') return false;
-  
-  // Check multiple indicators of a new browser session
-  const sessionExists = sessionStorage.getItem(SESSION_KEY);
-  const sessionTimestamp = sessionStorage.getItem(SESSION_TIMESTAMP_KEY);
-  
-  // If no session storage data exists, it's definitely a new session
-  if (!sessionExists || !sessionTimestamp) {
-    return true;
-  }
-  
-  // Additional check: if session is older than expected, treat as new
-  const now = Date.now();
-  const sessionTime = parseInt(sessionTimestamp, 10);
-  const timeDiff = now - sessionTime;
-  
-  // If session timestamp is more than 24 hours old, treat as new session
-  if (timeDiff > 24 * 60 * 60 * 1000) {
-    return true;
-  }
-  
-  return false;
-};
-
-// Initialize browser session tracking
-const initializeBrowserSession = async () => {
-  if (typeof window === 'undefined') return;
-  
-  // FIRST: Check if this is a new browser session BEFORE setting anything
-  const isNewSession = isNewBrowserSession();
-  const wasAuthActive = localStorage.getItem(AUTH_ACTIVE_KEY);
-  
-  console.log('Session tracking debug:', {
-    isNewSession,
-    wasAuthActive,
-    sessionStorage: !!sessionStorage.getItem(SESSION_KEY),
-    timestamp: sessionStorage.getItem(SESSION_TIMESTAMP_KEY),
-    currentUser: auth.currentUser?.email || 'none'
-  });
-  
-  // If this is a new browser session and auth was previously active, sign out immediately
-  if (isNewSession && wasAuthActive) {
-    console.log('🚪 New browser session detected - signing out previous session');
-    
-    // Clear auth markers first
-    localStorage.removeItem(AUTH_ACTIVE_KEY);
-    
-    // Sign out from Firebase
-    try {
-      await signOut(auth);
-      console.log('✅ Successfully signed out from previous session');
-    } catch (error) {
-      console.error('❌ Error signing out:', error);
-    }
-  }
-  
-  // NOW set the session markers for this new session
-  sessionStorage.setItem(SESSION_KEY, 'active');
-  sessionStorage.setItem(SESSION_TIMESTAMP_KEY, Date.now().toString());
-  
-  console.log('🔄 Session markers set for new browser session');
-};
 
 // Mark authentication as active
 const markAuthActive = () => {
   if (typeof window === 'undefined') return;
   localStorage.setItem(AUTH_ACTIVE_KEY, 'true');
-  // Also refresh session markers when auth becomes active
-  sessionStorage.setItem(SESSION_KEY, 'active');
-  sessionStorage.setItem(SESSION_TIMESTAMP_KEY, Date.now().toString());
 };
 
 // Clear authentication markers
 const clearAuthMarkers = () => {
   if (typeof window === 'undefined') return;
   localStorage.removeItem(AUTH_ACTIVE_KEY);
-  sessionStorage.removeItem(SESSION_KEY);
-  sessionStorage.removeItem(SESSION_TIMESTAMP_KEY);
 };
 
-// Set up page unload detection for tab/browser close
+// Simplified page unload detection
 const setupPageUnloadDetection = () => {
   if (typeof window === 'undefined') return;
   
-  // Track when page is being unloaded
+  // Simple cleanup on page unload
   const handleBeforeUnload = () => {
-    // This runs when tab/browser is being closed or page is navigating away
-    // We don't sign out here since refresh should maintain login
-    console.log('Page unload detected - maintaining auth state for potential refresh');
+    console.log('Page unload detected - maintaining auth state');
   };
   
-  // Track page visibility changes (tab switching, minimizing, etc.)
-  const handleVisibilityChange = () => {
-    if (document.hidden) {
-      console.log('Page hidden - tab switched or minimized');
-    } else {
-      console.log('Page visible - tab focused');
-      // Refresh session markers when tab becomes visible again
-      if (auth.currentUser && localStorage.getItem(AUTH_ACTIVE_KEY)) {
-        sessionStorage.setItem(SESSION_KEY, 'active');
-        sessionStorage.setItem(SESSION_TIMESTAMP_KEY, Date.now().toString());
-      }
-    }
-  };
-  
-  // Add event listeners
   window.addEventListener('beforeunload', handleBeforeUnload);
-  document.addEventListener('visibilitychange', handleVisibilityChange);
   
   // Return cleanup function
   return () => {
     window.removeEventListener('beforeunload', handleBeforeUnload);
-    document.removeEventListener('visibilitychange', handleVisibilityChange);
   };
 };
 
@@ -184,8 +98,7 @@ googleProvider.addScope('https://www.googleapis.com/auth/userinfo.email');
 googleProvider.addScope('https://www.googleapis.com/auth/userinfo.profile');
 // Set custom parameters for redirect-based auth
 googleProvider.setCustomParameters({
-  prompt: 'select_account',
-  ux_mode: 'redirect'  // Always use redirect
+  prompt: 'select_account'
 });
 
 // --- Helper Functions ---
@@ -206,7 +119,7 @@ const loginWithEmail = async (email: string, password: string) => {
   return result;
 };
 
-// Sign in with Google
+// Sign in with Google using redirect
 const signInWithGoogle = async () => {
   try {
     // Configure provider with standard parameters
@@ -214,20 +127,12 @@ const signInWithGoogle = async () => {
       prompt: 'select_account'
     });
     
-    // Use popup authentication which works consistently
-    const result = await signInWithPopup(auth, googleProvider);
+    // Use redirect authentication for better mobile compatibility
+    await signInWithRedirect(auth, googleProvider);
     
-    // Store email for future hints if available
-    if (result.user.email) {
-      localStorage.setItem('lastEmail', result.user.email);
-    }
-    
-    // Mark authentication as active for browser session tracking
-    markAuthActive();
-    
-    // Return result with isNewUser flag
-    const isNewUser = result.user.metadata.creationTime === result.user.metadata.lastSignInTime;
-    return { user: result.user, isNewUser };
+    // Note: The actual result will be handled by handleRedirectResult()
+    // This function just initiates the redirect
+    return true;
   } catch (error) {
     console.error("Google sign-in error:", error);
     throw error;
@@ -469,10 +374,10 @@ const verifyAuthConfig = async () => {
     // Use a standard Firebase call instead of accessing internals
     console.log("Checking for pending redirects...");
     await getRedirectResult(auth)
-      .then(result => {
+      .then((result: any) => {
         console.log("Pending redirect check:", result ? "Yes" : "No");
       })
-      .catch(e => {
+      .catch((e: any) => {
         console.error("Error checking for pending redirects:", e);
       });
   } catch (e) {
@@ -547,8 +452,6 @@ export {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signOut,
-  initializeBrowserSession,
-  isNewBrowserSession,
   markAuthActive,
   clearAuthMarkers,
   setupPageUnloadDetection

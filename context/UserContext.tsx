@@ -12,7 +12,6 @@ import {
   signInWithEmailAndPassword,
   signOut,
   type User as FirebaseUser,
-  initializeBrowserSession,
   markAuthActive,
   clearAuthMarkers,
   setupPageUnloadDetection,
@@ -42,20 +41,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
   // Convert undefined to null to match our interface
   const user = authUser ?? null;
 
-  // Initialize browser session tracking after auth state is determined
+  // Initialize session tracking
   useEffect(() => {
-    const initializeSession = async () => {
-      try {
-        // Always run session tracking, regardless of loading state
-        // This ensures we catch new browser sessions immediately
-        await initializeBrowserSession();
-        console.log("UserContext: Browser session tracking initialized");
-      } catch (error) {
-        console.error("UserContext: Error initializing browser session:", error);
-      }
-    };
-
-    initializeSession();
+    console.log("UserContext: Session tracking initialized");
   }, []); // Run once on mount
 
   // Set up page unload detection
@@ -79,7 +67,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem('userEmail');
       localStorage.removeItem('userId');
       localStorage.removeItem('userToken');
-      sessionStorage.clear();
       // Clear authentication markers
       clearAuthMarkers();
     }
@@ -106,7 +93,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem('userEmail');
       localStorage.removeItem('userId');
       localStorage.removeItem('userToken');
-      sessionStorage.clear();
       
       // Clear authentication markers
       clearAuthMarkers();

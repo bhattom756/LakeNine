@@ -33,7 +33,7 @@ const GoogleAuthTroubleshooting = () => {
       } else {
         popup.close();
       }
-    } catch (e) {
+    } catch (e: any) {
       data.popupError = (e as Error).message;
     }
     
@@ -48,7 +48,7 @@ const GoogleAuthTroubleshooting = () => {
       localStorage.setItem('test-item', 'test');
       localStorage.removeItem('test-item');
       data.localStorageAccess = true;
-    } catch (e) {
+    } catch (e: any) {
       data.localStorageAccess = false;
       data.localStorageError = (e as Error).message;
     }
@@ -66,7 +66,7 @@ const GoogleAuthTroubleshooting = () => {
         db.close();
         indexedDB.deleteDatabase('test-db');
       };
-    } catch (e) {
+    } catch (e: any) {
       data.indexedDBAccess = false;
       data.indexedDBError = (e as Error).message;
     }
@@ -77,7 +77,7 @@ const GoogleAuthTroubleshooting = () => {
       try {
         const registrations = await navigator.serviceWorker.getRegistrations();
         data.serviceWorkerRegistrations = registrations.length;
-      } catch (e) {
+      } catch (e: any) {
         data.serviceWorkerError = (e as Error).message;
       }
     } else {
@@ -91,7 +91,7 @@ const GoogleAuthTroubleshooting = () => {
       
       // Safe check for authentication state
       data.hasCurrentUser = !!auth.currentUser;
-    } catch (e) {
+    } catch (e: any) {
       data.firebaseError = (e as Error).message;
     }
     
@@ -124,13 +124,13 @@ const GoogleAuthTroubleshooting = () => {
           throw error;
         });
       
-      setDiagnostics((prev) => ({
+      setDiagnostics((prev: any) => ({
         ...prev, 
         popupTest: 'success',
         popupAuthTestResult: popup ? 'opened' : 'failed'
       }));
     } catch (e: any) {
-      setDiagnostics((prev) => ({
+      setDiagnostics((prev: any) => ({
         ...prev,
         popupTest: 'failed',
         popupTestError: e.code || e.message

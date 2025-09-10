@@ -2,6 +2,7 @@
 
 import { useEffect, useState, CSSProperties } from "react";
 import { loginWithEmail, signInWithGoogle, resetPassword, handleRedirectResult, verifyAuthConfig } from "@/lib/firebase";
+import { getAuthErrorMessage } from "@/lib/auth-errors";
 import { useUser } from "@/context/UserContext";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -51,17 +52,8 @@ export default function LoginPage() {
         }
       } catch (err: any) {
         console.error("Redirect error in login page:", err);
-        let errorMessage = "Google sign-in failed. Please try again.";
-        
-        if (err.code === "auth/account-exists-with-different-credential") {
-          errorMessage = "An account already exists with a different sign-in method.";
-        } else if (err.code === "auth/network-request-failed") {
-          errorMessage = "Network error. Please check your internet connection.";
-        } else if (err.code) {
-          errorMessage = `Error: ${err.code}`;
-        }
-        
-        toast.error(errorMessage);
+        const authError = getAuthErrorMessage(err);
+        toast.error(authError.userMessage);
         setIsGoogleLoading(false);
       }
     };
@@ -106,22 +98,8 @@ export default function LoginPage() {
       console.log("Login page: Login successful, redirecting to:", redirectPath);
       router.push(redirectPath);
     } catch (err: any) {
-      // Provide user-friendly error messages
-      let errorMessage = "Login failed. Please try again.";
-      
-      if (err.code === "auth/invalid-credential") {
-        errorMessage = "Incorrect email or password.";
-      } else if (err.code === "auth/user-not-found") {
-        errorMessage = "No account found with this email.";
-      } else if (err.code === "auth/wrong-password") {
-        errorMessage = "Incorrect password.";
-      } else if (err.code === "auth/too-many-requests") {
-        errorMessage = "Too many failed attempts. Please try again later.";
-      } else if (err.code === "auth/network-request-failed") {
-        errorMessage = "Network error. Please check your internet connection.";
-      }
-      
-      toast.error(errorMessage);
+      const authError = getAuthErrorMessage(err);
+      toast.error(authError.userMessage);
     } finally {
       setIsLoading(false);
     }
@@ -130,32 +108,13 @@ export default function LoginPage() {
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
     try {
-      // Use Google popup authentication
-      const result = await signInWithGoogle();
-      if (result?.user) {
-        toast.success("Signed in with Google successfully!");
-        
-        // Check for redirect path or default to studio
-        const redirectPath = localStorage.getItem('authRedirectPath') || '/studio';
-        localStorage.removeItem('authRedirectPath');
-        console.log("Login page: Google login successful, redirecting to:", redirectPath);
-        router.push(redirectPath);
-      }
+      // Use Google redirect authentication
+      await signInWithGoogle();
+      // Page will redirect to Google, then back to our app
+      // The redirect result will be handled by the useEffect above
     } catch (err: any) {
-      let errorMessage = "Google sign-in failed. Please try again.";
-      
-      if (err.code === "auth/popup-closed-by-user") {
-        errorMessage = "Sign-in was cancelled. Please try again.";
-      } else if (err.code === "auth/popup-blocked") {
-        errorMessage = "Pop-up was blocked. Please allow pop-ups for this site.";
-      } else if (err.code === "auth/cancelled-popup-request") {
-        errorMessage = "Sign-in was cancelled. Please try again.";
-      } else if (err.code === "auth/network-request-failed") {
-        errorMessage = "Network error. Please check your internet connection.";
-      }
-      
-      toast.error(errorMessage);
-    } finally {
+      const authError = getAuthErrorMessage(err);
+      toast.error(authError.userMessage);
       setIsGoogleLoading(false);
     }
   };

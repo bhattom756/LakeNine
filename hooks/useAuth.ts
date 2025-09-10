@@ -84,7 +84,7 @@ export function useAuth() {
     try {
       localStorage.setItem('lastAuthMethod', 'google-redirect');
       await signInWithGoogle();
-      // Page will reload
+      // Page will redirect to Google, then back to our app
       return true;
     } catch (err: any) {
       console.error("[useAuth] Google redirect error:", err);
