@@ -90,10 +90,6 @@ body {
   background: transparent !important;
 }
 
-/* Remove any potential gaps */
-* {
-  box-sizing: border-box;
-}
 
 section, header, footer, main {
   background: transparent !important;
@@ -692,5 +688,41 @@ section, header, footer, main {
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Shining text effect for hoverable headings/labels */
+@keyframes text-shine {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.shine-text {
+  color: #ffffff;
+}
+
+.shine-text:hover {
+  background-image: linear-gradient(
+    120deg,
+    rgba(0,0,0,0.95) 10%,
+    rgba(255,255,255,0.95) 30%,
+    rgba(0,0,0,0.95) 50%,
+    rgba(255,255,255,0.95) 70%,
+    rgba(0,0,0,0.95) 90%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: text-shine 1s linear 0s 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shine-text:hover {
+    animation: none;
   }
 }

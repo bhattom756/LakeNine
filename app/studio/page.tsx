@@ -172,7 +172,7 @@ export default function StudioPage() {
       <Navbar />
 
       {/* Studio Layout */}
-      <div className="flex h-[calc(100vh-60px)] overflow-hidden">
+      <div className="flex h-screen overflow-hidden">
         {/* Left Panel - File Explorer */}
         <div 
           className="bg-[#1a1a1a] border-r border-gray-800 flex flex-col overflow-hidden"

@@ -21,13 +21,6 @@ const Navbar = () => {
   const { user, logout, loading } = useUser();
   const router = useRouter();
 
-  
-  // if(sessionStorage.getItem("userToken") === null) {
-  //   useEffect(() => {
-  //     logout();
-  //   }, []);
-  // }
-
   const handleLogout = async () => {
     try {
       console.log("Navbar: Logout button clicked");
