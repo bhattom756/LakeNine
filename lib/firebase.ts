@@ -19,6 +19,14 @@ import {
   signInWithCredential,
   browserPopupRedirectResolver
 } from "firebase/auth";
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  setDoc,
+  runTransaction,
+  serverTimestamp
+} from "firebase/firestore";
 import { getAnalytics, isSupported } from "firebase/analytics";
 
 // Firebase config from your dashboard
@@ -35,6 +43,7 @@ const firebaseConfig = {
 // Initialize Firebase only once (for hot reload/dev)
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const auth = getAuth(app);
+const db = getFirestore(app);
 
 // Configure auth persistence in browser
 if (typeof window !== 'undefined') {
@@ -170,11 +179,67 @@ googleProvider.addScope('https://www.googleapis.com/auth/userinfo.profile');
 // --- Helper Functions ---
 
 // Sign up with email and password
-const registerWithEmail = async (email: string, password: string) => {
+const isUsernameAvailable = async (username: string): Promise<boolean> => {
+  const snap = await getDoc(doc(db, 'usernames', username.toLowerCase()));
+  return !snap.exists();
+};
+
+const registerWithEmailAndUsername = async (email: string, password: string, username: string) => {
+  const normalizedUsername = username.trim().toLowerCase();
+  if (!normalizedUsername) {
+    throw new Error('Username is required');
+  }
+
+  // First create auth user so Firestore rules for authenticated users apply
   const result = await createUserWithEmailAndPassword(auth, email, password);
-  // Mark authentication as active for browser session tracking
-  markAuthActive();
-  return result;
+
+  const { updateProfile, deleteUser } = await import('firebase/auth');
+
+  try {
+    // Atomically claim username and create profile using a transaction
+    await runTransaction(db, async (tx) => {
+      const usernameRef = doc(db, 'usernames', normalizedUsername);
+      const profileRef = doc(db, 'users', result.user.uid);
+      const existing = await tx.get(usernameRef);
+      if (existing.exists()) {
+        throw Object.assign(new Error('Username already taken'), { code: 'auth/username-already-in-use' });
+      }
+      tx.set(usernameRef, {
+        uid: result.user.uid,
+        email,
+        createdAt: serverTimestamp()
+      });
+      tx.set(profileRef, {
+        uid: result.user.uid,
+        email,
+        username,
+        createdAt: serverTimestamp()
+      });
+    });
+
+    // Set displayName to username for easy access in UI
+    try {
+      await updateProfile(result.user, { displayName: username });
+    } catch (e) {
+      console.warn('Failed to set displayName on profile:', e);
+    }
+
+    // Mark authentication as active for browser session tracking
+    markAuthActive();
+    return result;
+  } catch (err: any) {
+    // Roll back auth user if username claim failed
+    try {
+      await deleteUser(result.user);
+    } catch (rollbackErr) {
+      console.warn('Failed to rollback auth user after username error:', rollbackErr);
+    }
+    if (err?.code === 'auth/username-already-in-use') {
+      throw err;
+    }
+    // Re-throw other errors
+    throw err;
+  }
 };
 
 // Log in with email and password
@@ -185,8 +250,23 @@ const loginWithEmail = async (email: string, password: string) => {
   return result;
 };
 
+const resolveEmailFromUsername = async (input: string): Promise<string> => {
+  const candidate = input.trim();
+  if (!candidate) throw new Error('Missing login identifier');
+  if (candidate.includes('@')) return candidate; // looks like an email
+  const snap = await getDoc(doc(db, 'usernames', candidate.toLowerCase()));
+  if (!snap.exists()) {
+    const err: any = new Error('Username not found');
+    err.code = 'auth/user-not-found';
+    throw err;
+  }
+  const data = snap.data() as { email?: string };
+  if (!data?.email) throw new Error('Username mapping invalid');
+  return data.email;
+};
+
 // Sign in with Google
-const signInWithGoogle = async (provider: GoogleAuthProvider) => {
+const signInWithGoogle = async () => {
   try {
     // Configure provider with standard parameters
     googleProvider.setCustomParameters({
@@ -490,9 +570,11 @@ const signInWithGooglePopup = async () => {
 export {
   auth,
   app,
+  db,
   googleProvider,
-  registerWithEmail,
+  registerWithEmailAndUsername,
   loginWithEmail,
+  resolveEmailFromUsername,
   signInWithGoogle,
   signInWithGooglePopup,
   signUpWithGoogle,
@@ -515,4 +597,4 @@ export {
 };
 
 export type { User };
-
+ 

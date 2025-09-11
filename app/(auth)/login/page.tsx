@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, CSSProperties } from "react";
-import { loginWithEmail, signInWithGoogle, resetPassword, verifyAuthConfig } from "@/lib/firebase";
+import { loginWithEmail, resolveEmailFromUsername, signInWithGoogle, resetPassword, verifyAuthConfig } from "@/lib/firebase";
 import { useUser } from "@/context/UserContext";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -14,7 +14,7 @@ import { GoogleAuthProvider } from "firebase/auth";
 export default function LoginPage() {
   const { user } = useUser();
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [pwd, setPwd] = useState("");
   const [error, setError] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
@@ -46,7 +46,7 @@ export default function LoginPage() {
     setError("");
     setIsLoading(true);
 
-    if (!email || !pwd) {
+    if (!identifier || !pwd) {
       toast.error("Please fill in both fields.");
       setIsLoading(false);
       return;
@@ -54,6 +54,7 @@ export default function LoginPage() {
 
     try {
       console.log("Login page: Attempting login...");
+      const email = await resolveEmailFromUsername(identifier);
       await loginWithEmail(email, pwd);
       toast.success("Logged in successfully!");
       
@@ -69,7 +70,7 @@ export default function LoginPage() {
       if (err.code === "auth/invalid-credential") {
         errorMessage = "Incorrect email or password.";
       } else if (err.code === "auth/user-not-found") {
-        errorMessage = "No account found with this email.";
+        errorMessage = "No account found with this username/email.";
       } else if (err.code === "auth/wrong-password") {
         errorMessage = "Incorrect password.";
       } else if (err.code === "auth/too-many-requests") {
@@ -121,7 +122,7 @@ export default function LoginPage() {
   const handleResetPassword = async (e: React.MouseEvent) => {
     e.preventDefault();
     
-    if (!email) {
+    if (!identifier) {
       toast.error("Please enter your email address above", {
         id: "reset-error-email",
         duration: 4000
@@ -138,25 +139,25 @@ export default function LoginPage() {
     
     try {
       // Validate email format client-side first
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier)) {
         throw { code: "auth/invalid-email" };
       }
       
       // Try to send the reset email
-      console.log("Attempting password reset for:", email);
+      console.log("Attempting password reset for:", identifier);
       
       // Import directly from firebase to ensure we're using the right function
-      const result = await resetPassword(email);
+      const result = await resetPassword(identifier);
       console.log("Reset email result:", result);
       
       // Success - update the loading toast
-      toast.success(`Reset link sent to ${email}. Check your inbox and spam folder.`, {
+      toast.success(`Reset link sent to ${identifier}. Check your inbox and spam folder.`, {
         id: loadingToastId,
         duration: 5000
       });
       
       // Clear the email field to indicate success
-      setEmail("");
+      setIdentifier("");
     } catch (err: any) {
       console.error("Password reset error:", err);
       
@@ -171,7 +172,7 @@ export default function LoginPage() {
       if (err.code === "auth/user-not-found") {
         // We don't want to reveal if an email exists or not for security reasons
         // So we show a generic success message even if the email doesn't exist
-        toast.success(`If an account exists for ${email}, a password reset link will be sent.`, {
+        toast.success(`If an account exists for ${identifier}, a password reset link will be sent.`, {
           id: loadingToastId,
           duration: 5000
         });
@@ -218,16 +219,16 @@ export default function LoginPage() {
           onSubmit={handleLogin}
           className="bg-[#1a1a1a] p-12 my-8 rounded-xl w-[30rem] space-y-4 shadow-lg"
         >
-          <label className="text-sm font-medium">Email</label>
+          <label className="text-sm font-medium">Username or Email</label>
           <input
-            type="email"
-            name="email"
-            id="email"
-            autoComplete="email"
-            placeholder="Your email address"
+            type="text"
+            name="identifier"
+            id="identifier"
+            autoComplete="username"
+            placeholder="Your username or email"
             className="w-full px-4 py-3 text-white bg-[#222630] rounded-lg border-2 border-solid border-[#2B3040] outline-none focus:border-[#596A95] transition-colors duration-200"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            value={identifier}
+            onChange={(e) => setIdentifier(e.target.value)}
           />
 
           <label className="text-sm font-medium">Password</label>

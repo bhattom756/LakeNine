@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, CSSProperties } from "react";
-import { registerWithEmail, signUpWithGoogle, verifyAuthConfig } from "@/lib/firebase";
+import { registerWithEmailAndUsername, signUpWithGoogle, verifyAuthConfig } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import google from "@/public/google.png";
@@ -10,6 +10,7 @@ import { ScaleLoader } from "react-spinners";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [pwd, setPwd] = useState("");
   const [error, setError] = useState("");
   const [passwordStrength, setPasswordStrength] = useState<"weak" | "medium" | "strong" | null>(null);
@@ -57,8 +58,8 @@ export default function SignupPage() {
     setError("");
     setIsLoading(true);
 
-    if (!email || !pwd) {
-      toast.error("Email & password required");
+    if (!email || !pwd || !username.trim()) {
+      toast.error("Email, username & password required");
       setIsLoading(false);
       return;
     }
@@ -70,12 +71,15 @@ export default function SignupPage() {
     }
 
     try {
-      await registerWithEmail(email, pwd);
+      await registerWithEmailAndUsername(email, pwd, username);
       toast.success("Account created successfully!");
       router.push("/"); // Redirect to home after signup
     } catch (err: any) {
       let errorMessage = "Failed to create account. Please try again.";
 
+      if (err.code === "auth/username-already-in-use") {
+        errorMessage = "This username is already taken.";
+      } else 
       if (err.code === "auth/email-already-in-use") {
         errorMessage = "This email is already registered.";
         toast.error(
@@ -161,6 +165,18 @@ export default function SignupPage() {
           className="bg-[#1a1a1a] p-12 my-8 rounded-xl w-[30rem] space-y-4 shadow-lg"
         >
           {error && <p className="text-red-500 text-sm">{error}</p>}
+
+          <label className="text-sm font-medium">Username</label>
+          <input
+            type="text"
+            name="username"
+            id="username"
+            autoComplete="username"
+            placeholder="Choose a unique username"
+            className="w-full px-4 py-3 text-white bg-[#222630] rounded-lg border-2 border-solid border-[#2B3040] outline-none focus:border-[#596A95] transition-colors duration-200"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+          />
 
           <label className="text-sm font-medium">Email</label>
           <input

@@ -1,21 +1,28 @@
-
 "use client";
-import Image  from "next/image";
+import Image from "next/image";
 import logoimg from "@/public/loginLogo.png";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { GoGear } from "react-icons/go";
 import { CgProfile } from "react-icons/cg";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/context/UserContext";
 import { useState, useEffect } from "react";
 import toast, { Toaster } from "react-hot-toast";
-
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
 
 export default function MyAccountPage() {
-
-  const {user, logout, loading} = useUser()
-  const router = useRouter()
+  const { user, logout, loading } = useUser();
+  const router = useRouter();
 
   const handleLogout = async () => {
     try {
@@ -44,30 +51,38 @@ export default function MyAccountPage() {
   };
 
   const getUserDisplayName = () => {
-    if(!user) return '';
-    return user.displayName || user.email || 'user'
-  }
+    if (!user) return "";
+    return user.displayName || user.email || "user";
+  };
 
   const getUserInitials = () => {
-    if (!user) return '';
-    const raw = (user.displayName || user.email || '').trim();
-    if (!raw) return '';
-    const base = raw.includes('@') ? raw.split('@')[0] : raw;
+    if (!user) return "";
+    const raw = (user.displayName || user.email || "").trim();
+    if (!raw) return "";
+    const base = raw.includes("@") ? raw.split("@")[0] : raw;
     const parts = base.split(/\s+/).filter(Boolean);
     if (parts.length >= 2) {
       return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
     }
-    const single = parts[0] || '';
+    const single = parts[0] || "";
     return single.slice(0, 2).toUpperCase();
-  }
+  };
 
   return (
-  <div className="min-h-screen p-12">
-    <div className="flex justify-between">
-      <Link href={'/'}> <Image src={logoimg} alt="home" className="mx-5" height={40} width={40} />
-      </Link>
-     <p className="text-xl font-semibold">Dashboard</p>
-     <div className="flex items-center gap-3 mx-5">
+    <div className="min-h-screen p-10">
+      <div className="flex justify-between">
+        <Link href={"/"}>
+          {" "}
+          <Image
+            src={logoimg}
+            alt="home"
+            className="mx-5"
+            height={40}
+            width={40}
+          />
+        </Link>
+        <p className="text-xl font-semibold">Dashboard</p>
+        <div className="flex items-center gap-3 mx-5">
           {!user ? (
             <Link
               href="/login"
@@ -99,8 +114,44 @@ export default function MyAccountPage() {
             </DropdownMenu>
           )}
         </div>
+      </div>
+      <div className="p-23 flex flex-row ">
+        <Tabs defaultValue="account" className="flex w-full">
+          <div className="basis-2/5 pr-24">
+            <TabsList className="mt-6 flex flex-col items-stretch gap-2 bg-transparent shadow-none border-0 p-0">
+              <TabsTrigger
+                value="account"
+                className="justify-start bg-transparent text-gray-300 shadow-none border-0 hover:bg-[#2a2f38] hover:text-white data-[state=active]:bg-[#22272e] data-[state=active]:text-white rounded-md px-4 py-3 transition-colors"
+              >
+              <CgProfile size={20} className="mx-2"/>  Profile
+              </TabsTrigger>
+              <TabsTrigger
+                value="password"
+                className="justify-start bg-transparent text-gray-300 shadow-none border-0 hover:bg-[#2a2f38] hover:text-white data-[state=active]:bg-[#22272e] data-[state=active]:text-white rounded-md px-4 py-3 transition-colors"
+              >
+              <GoGear size={20} className="mx-2"/>  Settings
+              </TabsTrigger>
+              <Separator />
+              <TabsTrigger
+                value="password"
+                className="justify-start bg-transparent text-gray-300 shadow-none border-0 hover:bg-[#2a2f38] hover:text-white data-[state=active]:bg-[#22272e] data-[state=active]:text-white rounded-md px-4 py-3 transition-colors"
+              >
+              <GoGear size={20} className="mx-2"/>  Settings
+              </TabsTrigger>
+
+            </TabsList>
+          </div>
+          {/* trigger tab */}
+          <div className="basis-3/5">
+            <TabsContent value="account">
+              Make changes to your account here.
+            </TabsContent>
+            <TabsContent value="password">
+              Change your password here.
+            </TabsContent>
+          </div>
+        </Tabs>
+      </div>
     </div>
-  </div>
-  
   );
 }
