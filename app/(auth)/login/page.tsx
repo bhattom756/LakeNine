@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, CSSProperties } from "react";
-import { loginWithEmail, signInWithGoogle, resetPassword, handleRedirectResult, verifyAuthConfig } from "@/lib/firebase";
+import { loginWithEmail, signInWithGoogle, resetPassword, verifyAuthConfig } from "@/lib/firebase";
 import { useUser } from "@/context/UserContext";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -9,6 +9,7 @@ import Link from "next/link";
 import google from "@/public/google.png";
 import toast, { Toaster } from 'react-hot-toast';
 import { ScaleLoader } from "react-spinners";
+import { GoogleAuthProvider } from "firebase/auth";
 
 export default function LoginPage() {
   const { user } = useUser();
@@ -24,50 +25,6 @@ export default function LoginPage() {
     display: "block",
     margin: "0 auto",
   };
-
-  useEffect(() => {
-    console.log("Login page loaded, checking for redirect results");
-    
-    const checkRedirect = async () => {
-      try {
-        setIsGoogleLoading(true);
-        console.log("Checking for redirect result in login page");
-        const result = await handleRedirectResult();
-        console.log("Redirect result processed:", result);
-        
-        if (result?.user) {
-          console.log("Successfully authenticated user after redirect:", result.user.email);
-          toast.success("Signed in with Google successfully!");
-          
-          const redirectPath = localStorage.getItem('authRedirectPath') || '/';
-          localStorage.removeItem('authRedirectPath'); // Clear it
-          
-          setTimeout(() => {
-            router.push(redirectPath);
-          }, 500);
-        } else {
-          console.log("No redirect result found");
-          setIsGoogleLoading(false);
-        }
-      } catch (err: any) {
-        console.error("Redirect error in login page:", err);
-        let errorMessage = "Google sign-in failed. Please try again.";
-        
-        if (err.code === "auth/account-exists-with-different-credential") {
-          errorMessage = "An account already exists with a different sign-in method.";
-        } else if (err.code === "auth/network-request-failed") {
-          errorMessage = "Network error. Please check your internet connection.";
-        } else if (err.code) {
-          errorMessage = `Error: ${err.code}`;
-        }
-        
-        toast.error(errorMessage);
-        setIsGoogleLoading(false);
-      }
-    };
-    
-    checkRedirect();
-  }, [router]);
 
   useEffect(() => {
     if (user) {
@@ -130,8 +87,9 @@ export default function LoginPage() {
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
     try {
-      // Use Google popup authentication
-      const result = await signInWithGoogle();
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({display: 'popup'})
+      const result = await signInWithGoogle(provider);
       if (result?.user) {
         toast.success("Signed in with Google successfully!");
         

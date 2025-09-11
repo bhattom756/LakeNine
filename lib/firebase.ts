@@ -16,7 +16,8 @@ import {
   User,
   setPersistence,
   browserLocalPersistence,
-  signInWithCredential
+  signInWithCredential,
+  browserPopupRedirectResolver
 } from "firebase/auth";
 import { getAnalytics, isSupported } from "firebase/analytics";
 
@@ -35,12 +36,8 @@ const firebaseConfig = {
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const auth = getAuth(app);
 
-// Configure auth to use the correct auth domain
+// Configure auth persistence in browser
 if (typeof window !== 'undefined') {
-  // Always use the configured auth domain from Firebase
-  auth.config.authDomain = firebaseConfig.authDomain;
-  
-  // Set proper persistence - use local persistence but with browser session tracking
   setPersistence(auth, browserLocalPersistence)
     .catch((error) => {
       console.error("Error setting auth persistence:", error);
@@ -101,21 +98,7 @@ const initializeBrowserSession = async () => {
     currentUser: auth.currentUser?.email || 'none'
   });
   
-  // If this is a new browser session and auth was previously active, sign out immediately
-  if (isNewSession && wasAuthActive) {
-    console.log('🚪 New browser session detected - signing out previous session');
-    
-    // Clear auth markers first
-    localStorage.removeItem(AUTH_ACTIVE_KEY);
-    
-    // Sign out from Firebase
-    try {
-      await signOut(auth);
-      console.log('✅ Successfully signed out from previous session');
-    } catch (error) {
-      console.error('❌ Error signing out:', error);
-    }
-  }
+  // Do not force sign-out on new sessions; rely on Firebase persistence behavior.
   
   // NOW set the session markers for this new session
   sessionStorage.setItem(SESSION_KEY, 'active');
@@ -182,11 +165,7 @@ const googleProvider = new GoogleAuthProvider();
 // Add scopes for better user data access
 googleProvider.addScope('https://www.googleapis.com/auth/userinfo.email');
 googleProvider.addScope('https://www.googleapis.com/auth/userinfo.profile');
-// Set custom parameters for redirect-based auth
-googleProvider.setCustomParameters({
-  prompt: 'select_account',
-  ux_mode: 'redirect'  // Always use redirect
-});
+// Note: redirect vs popup is selected by calling the respective API; we use popup.
 
 // --- Helper Functions ---
 
@@ -207,15 +186,16 @@ const loginWithEmail = async (email: string, password: string) => {
 };
 
 // Sign in with Google
-const signInWithGoogle = async () => {
+const signInWithGoogle = async (provider: GoogleAuthProvider) => {
   try {
     // Configure provider with standard parameters
     googleProvider.setCustomParameters({
-      prompt: 'select_account'
+      prompt: 'select_account',
+      login_hint: localStorage.getItem('lastEmail') || ''
     });
     
     // Use popup authentication which works consistently
-    const result = await signInWithPopup(auth, googleProvider);
+    const result = await signInWithPopup(auth, googleProvider, browserPopupRedirectResolver);
     
     // Store email for future hints if available
     if (result.user.email) {
@@ -241,7 +221,6 @@ const handleRedirectResult = async () => {
   try {
     console.log("Checking for Google redirect result...");
     console.log("Current URL:", window.location.href);
-    console.log("Auth domain being used:", auth.config.authDomain);
     console.log("Provider ID:", googleProvider.providerId);
     
     // First check if we already have a user
@@ -287,9 +266,10 @@ const handleRedirectResult = async () => {
       if (redirectError.code === 'auth/credential-already-in-use') {
         console.log("Credential already in use, attempting to recover...");
         try {
-          // Try to recover by signing in with the existing credential
-          if (redirectError.credential) {
-            const recoveryResult = await signInWithCredential(auth, redirectError.credential);
+          // Try to recover by extracting credential from error
+          const recoveryCredential = GoogleAuthProvider.credentialFromError(redirectError);
+          if (recoveryCredential) {
+            const recoveryResult = await signInWithCredential(auth, recoveryCredential);
             console.log("Recovery successful:", recoveryResult.user.email);
             return { user: recoveryResult.user, isNewUser: false };
           }
@@ -459,26 +439,6 @@ const verifyAuthConfig = async () => {
   
   console.log("Verifying Firebase auth configuration...");
   console.log("Current origin:", window.location.origin);
-  
-  // Check if auth domain matches current origin
-  const authDomainMatches = firebaseConfig.authDomain.includes(window.location.hostname);
-  console.log(`Auth domain ${firebaseConfig.authDomain} matches current hostname: ${authDomainMatches}`);
-  
-  // Check if there are any pending redirects - with safe error handling
-  try {
-    // Use a standard Firebase call instead of accessing internals
-    console.log("Checking for pending redirects...");
-    await getRedirectResult(auth)
-      .then(result => {
-        console.log("Pending redirect check:", result ? "Yes" : "No");
-      })
-      .catch(e => {
-        console.error("Error checking for pending redirects:", e);
-      });
-  } catch (e) {
-    console.error("Error in redirect check:", e);
-  }
-  
   // Print public config info only
   console.log("Firebase Config:", {
     authDomain: firebaseConfig.authDomain,
@@ -508,7 +468,7 @@ const signInWithGooglePopup = async () => {
     });
     
     // Use popup method
-    const result = await signInWithPopup(auth, googleProvider);
+    const result = await signInWithPopup(auth, googleProvider, browserPopupRedirectResolver);
     console.log("Google popup sign-in successful:", result.user.email);
     
     // Store email for future hints

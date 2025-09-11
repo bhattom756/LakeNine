@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, CSSProperties } from "react";
-import { registerWithEmail, signUpWithGoogle, handleRedirectResult, verifyAuthConfig } from "@/lib/firebase";
+import { registerWithEmail, signUpWithGoogle, verifyAuthConfig } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import google from "@/public/google.png";
@@ -26,55 +26,6 @@ export default function SignupPage() {
   useEffect(() => {
     verifyAuthConfig();
   }, []);
-
-  // Check for redirect results on initial load
-  useEffect(() => {
-    console.log("Signup page loaded, checking for redirect results");
-    
-    const checkRedirect = async () => {
-      try {
-        setIsGoogleLoading(true);
-        console.log("Checking for redirect result in signup page");
-        const result = await handleRedirectResult();
-        console.log("Redirect result processed:", result);
-        
-        if (result?.user) {
-          console.log("Successfully authenticated user after redirect:", result.user.email);
-          if (result.isNewUser) {
-            toast.success("Account created with Google successfully!");
-          } else {
-            toast.success("Signed in with existing Google account!");
-          }
-          
-          // Get the stored redirect path or default to home page
-          const redirectPath = localStorage.getItem('authRedirectPath') || '/';
-          localStorage.removeItem('authRedirectPath'); // Clear it
-          
-          // Add a delay before redirecting to ensure the toast is shown
-          setTimeout(() => {
-            router.push(redirectPath);
-          }, 500);
-        } else {
-          console.log("No redirect result found");
-          setIsGoogleLoading(false);
-        }
-      } catch (err: any) {
-        console.error("Redirect error in signup page:", err);
-        let errorMessage = "Google sign-up failed. Please try again.";
-        
-        if (err.code === "auth/account-exists-with-different-credential") {
-          errorMessage = "An account already exists with a different sign-in method.";
-        } else if (err.code === "auth/network-request-failed") {
-          errorMessage = "Network error. Please check your internet connection.";
-        }
-        
-        toast.error(errorMessage);
-        setIsGoogleLoading(false);
-      }
-    };
-    
-    checkRedirect();
-  }, [router]);
 
   // Password strength checker
   useEffect(() => {

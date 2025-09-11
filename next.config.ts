@@ -22,8 +22,8 @@ const nextConfig: NextConfig = {
   headers: async () => {
     return [
       {
-        // Apply these headers to all routes
-        source: '/:path*',
+        // Studio requires cross-origin isolation for SharedArrayBuffer/WebContainers
+        source: '/studio/:path*',
         headers: [
           {
             key: 'Cross-Origin-Embedder-Policy',
@@ -32,6 +32,32 @@ const nextConfig: NextConfig = {
           {
             key: 'Cross-Origin-Opener-Policy',
             value: 'same-origin',
+          },
+        ],
+      },
+      {
+        source: '/login',
+        headers: [
+          {
+            key: 'Cross-Origin-Embedder-Policy',
+            value: 'unsafe-none',
+          },
+          {
+            key: 'Cross-Origin-Opener-Policy',
+            value: 'same-origin-allow-popups',
+          },
+        ],
+      },
+      {
+        source: '/signup',
+        headers: [
+          {
+            key: 'Cross-Origin-Embedder-Policy',
+            value: 'unsafe-none',
+          },
+          {
+            key: 'Cross-Origin-Opener-Policy',
+            value: 'same-origin-allow-popups',
           },
         ],
       },
