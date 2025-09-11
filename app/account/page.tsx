@@ -66,7 +66,7 @@ export default function MyAccountPage() {
     <div className="flex justify-between">
       <Link href={'/'}> <Image src={logoimg} alt="home" className="mx-5" height={40} width={40} />
       </Link>
-     <p className="text-xl font-semibold shine-text">Dashboard</p>
+     <p className="text-xl font-semibold">Dashboard</p>
      <div className="flex items-center gap-3 mx-5">
           {!user ? (
             <Link

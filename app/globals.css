@@ -95,13 +95,6 @@ section, header, footer, main {
   background: transparent !important;
 }
 
-@keyframes gradientFlow {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-/* Premium Glassmorphism Components */
 .premium-glass {
   background: rgba(255, 255, 255, 0.03);
   backdrop-filter: blur(20px) saturate(180%) !important;
@@ -414,17 +407,6 @@ section, header, footer, main {
   animation: staggerIn 0.8s ease forwards;
 }
 
-.stagger-item:nth-child(1) { animation-delay: 0.1s; }
-.stagger-item:nth-child(2) { animation-delay: 0.2s; }
-.stagger-item:nth-child(3) { animation-delay: 0.3s; }
-.stagger-item:nth-child(4) { animation-delay: 0.4s; }
-
-@keyframes staggerIn {
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
 
 /* Image Overlays */
 .image-overlay {
@@ -692,20 +674,8 @@ section, header, footer, main {
 }
 
 /* Shining text effect for hoverable headings/labels */
-@keyframes text-shine {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
-
 .shine-text {
   color: #ffffff;
-}
-
-.shine-text:hover {
   background-image: linear-gradient(
     120deg,
     rgba(0,0,0,0.95) 10%,
@@ -715,14 +685,19 @@ section, header, footer, main {
     rgba(0,0,0,0.95) 90%
   );
   background-size: 200% auto;
+  background-position: -200% 0;
+  transition: background-position 1s linear, color 0.2s ease;
+}
+
+.shine-text:hover {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  animation: text-shine 1s linear 0s 1;
+  background-position: 200% 0;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .shine-text:hover {
-    animation: none;
+  .shine-text {
+    transition: none;
   }
 }
